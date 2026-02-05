@@ -1,6 +1,6 @@
 # Memento 🕰️
 
-A Twitter/X bot that acts as a time capsule. Mention `@MementoBot` on any tweet, and it will republish it **5 years later**, bringing back memories from the past.
+A Twitter/X bot that acts as a time capsule. Mention `@MementoBot` on any tweet and it will republish it **5 years later**, bringing back memories from the past.
 
 ## How It Works
 
@@ -10,7 +10,7 @@ A Twitter/X bot that acts as a time capsule. Mention `@MementoBot` on any tweet,
 4. Five years later, the bot republishes the tweet as a quote tweet, tagging the original requester
 5. If the original tweet was deleted, the bot posts the saved snapshot with a message noting it was lost
 
-Each user can only save **one tweet per day** to prevent spam.
+Each user can only save **one tweet per day** to prevent spam. Each tweet can only be saved **once** — first come, first served. If someone tries to save an already-captured tweet, the bot replies: *"This one's already saved! ⏳"*
 
 ## Example
 
@@ -151,6 +151,7 @@ The bot is designed to run as a long-lived process. It starts two loops:
 ## Rate Limits
 
 - **Per user:** 1 capsule per day
+- **Per tweet:** 1 capsule ever (first come, first served)
 - **Twitter API:** The bot respects Twitter's rate limits with exponential back-off on 429 responses
 
 ## Edge Cases
@@ -160,7 +161,7 @@ The bot is designed to run as a long-lived process. It starts two loops:
 | Original tweet deleted            | Posts snapshot text + original link + "lost memory" message |
 | User already tagged today         | Replies with a friendly "come back tomorrow" message       |
 | Bot tagged on a root tweet        | Treats that tweet itself as the capsule target             |
-| Duplicate tag on the same tweet   | Ignored (tweet_id has a unique constraint)                 |
+| Tweet already saved by someone    | Replies: *"This one's already saved! ⏳"*                  |
 | Protected/suspended account       | Skipped gracefully, status set to `failed`                 |
 
 ## Tech Stack
