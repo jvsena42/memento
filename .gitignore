@@ -8,6 +8,8 @@
 *.so
 *.dylib
 memento
+
+# Database
 memento.db
 
 # Test binary, built with `go test -c`
