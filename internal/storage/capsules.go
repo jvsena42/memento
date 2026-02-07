@@ -64,3 +64,27 @@ func (s *CapsuleStore) UserSavedToday(requesterID string) (bool, error) {
 	return count > 0, nil
 }
 
+// GetDueCapsules returns all pending capsules that are due for republishing.
+func (s *CapsuleStore) GetDueCapsules() ([]Capsule, error) {
+	rows, err := s.db.Conn.Query(`
+		SELECT id, requester_id, requester_handle, tweet_id, tweet_author, tweet_text, is_reply, created_at, republish_at, status
+		FROM capsules
+		WHERE status = 'pending' AND republish_at <= ?
+		ORDER BY republish_at ASC
+	`, time.Now().UTC())
+	if err != nil {
+		return nil, fmt.Errorf("querying due capsules: %w", err)
+	}
+	defer rows.Close()
+
+	var capsules []Capsule
+	for rows.Next() {
+		var c Capsule
+		if err := rows.Scan(&c.ID, &c.RequesterID, &c.RequesterHandle, &c.TweetID, &c.TweetAuthor, &c.TweetText, &c.IsReply, &c.CreatedAt, &c.RepublishAt, &c.Status); err != nil {
+			return nil, fmt.Errorf("scanning capsule: %w", err)
+		}
+		capsules = append(capsules, c)
+	}
+
+	return capsules, rows.Err()
+}
