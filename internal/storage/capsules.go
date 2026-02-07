@@ -64,7 +64,7 @@ func (s *CapsuleStore) UserSavedToday(requesterID string) (bool, error) {
 	return count > 0, nil
 }
 
-// GetDueCapsules returns all pending capsules that are due for republishing.
+// GetDueCapsules returns all pending capsules that are due for republishing
 func (s *CapsuleStore) GetDueCapsules() ([]Capsule, error) {
 	rows, err := s.db.Conn.Query(`
 		SELECT id, requester_id, requester_handle, tweet_id, tweet_author, tweet_text, is_reply, created_at, republish_at, status
@@ -87,4 +87,23 @@ func (s *CapsuleStore) GetDueCapsules() ([]Capsule, error) {
 	}
 
 	return capsules, rows.Err()
+}
+
+// UpdateStatus updates the status of a capsule and optionally sets published_at
+func (s *CapsuleStore) UpdateStatus(id int64, status string) error {
+	var err error
+	if status == "published" || status == "deleted" {
+		now := time.Now().UTC()
+		_, err = s.db.Conn.Exec(`
+			UPDATE capsules SET status = ?, published_at = ? WHERE id = ?
+		`, status, now, id)
+	} else {
+		_, err = s.db.Conn.Exec(`
+			UPDATE capsules SET status = ? WHERE id = ?
+		`, status, id)
+	}
+	if err != nil {
+		return fmt.Errorf("updating capsule status: %w", err)
+	}
+	return nil
 }
