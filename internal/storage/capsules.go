@@ -48,3 +48,19 @@ func (s *CapsuleStore) TweetAlreadySaved (TweetID string) (bool,err) {
 
 	return count > 0, nil
 }
+
+func (s *CapsuleStore) UserSavedToday(requesterID string) (bool, error) {
+	today := time.Now().Truncate(24 * time.Hour)
+	tomorrow := today.Add(24 * time.Hour)
+
+	var count int
+	err := s.db.Conn.QueryRow(`
+		SELECT COUNT(*) FROM capsules
+		WHERE requester_id = ? AND created_at >= ? AND created_at < ?
+	`, requesterID, today, tomorrow).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("checking daily rate limit: %w", err)
+	}
+	return count > 0, nil
+}
+
