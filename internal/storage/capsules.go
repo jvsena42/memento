@@ -38,3 +38,13 @@ func (s *CapsuleStore) Create(c *Capsule) error {
 
 	return nil
 }
+
+func (s *CapsuleStore) TweetAlreadySaved (TweetID string) (bool,err) {
+	var count int
+	err := s.db.Conn.QueryRow("SELECT COUNT(*) FROM capsules WHERE tweet_id = ?", tweetID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("checking tweet existence: %w", err)
+	}
+
+	return count > 0, nil
+}
