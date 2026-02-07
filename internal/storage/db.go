@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	_ "modernc.org/sqlite"
 )
 
 type DB struct {
