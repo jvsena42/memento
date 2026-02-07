@@ -107,3 +107,18 @@ func (s *CapsuleStore) UpdateStatus(id int64, status string) error {
 	}
 	return nil
 }
+
+func (s *CapsuleStore) GetByID(id int64) (*Capsule, error) {
+	var c Capsule
+	err := s.db.Conn.QueryRow(`
+		SELECT id, requester_id, requester_handle, tweet_id, tweet_author, tweet_text, is_reply, created_at, republish_at, status, published_at
+		FROM capsules WHERE id = ?
+	`, id).Scan(&c.ID, &c.RequesterID, &c.RequesterHandle, &c.TweetID, &c.TweetAuthor, &c.TweetText, &c.IsReply, &c.CreatedAt, &c.RepublishAt, &c.Status, &c.PublishedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting capsule by id: %w", err)
+	}
+	return &c, nil
+}
