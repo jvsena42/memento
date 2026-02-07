@@ -104,3 +104,7 @@ func (db *DB) Migrate(migrationsDir string) error {
 
 	return nil
 }
+
+func (db *DB) Close() error {
+	return db.Conn.Close()
+}
