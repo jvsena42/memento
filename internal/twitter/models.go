@@ -1,12 +1,10 @@
 package twitter
 
-import "time"
-
 type Tweet struct {
-	ID        string    `json:"id"`
-	AuthorID  string    `json:"author_id"`
-	Text      string    `json:"text"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string `json:"id"`
+	AuthorID  string `json:"author_id"`
+	Text      string `json:"text"`
+	CreatedAt string `json:"created_at"`
 }
 
 type User struct {
@@ -35,15 +33,15 @@ type Includes struct {
 }
 
 type TweetResponse struct {
-	Tweet    Tweet       `json:"data"`
-	Includes []*Includes `json:"includes"`
-	Meta     []*Meta     `json:"meta"`
-	Errors   []APIError  `json:"errors"`
+	Tweet    Tweet      `json:"data"`
+	Includes *Includes  `json:"includes"`
+	Meta     *Meta      `json:"meta"`
+	Errors   []APIError `json:"errors"`
 }
 
 type TweetsResponse struct {
-	Tweets   []Tweet     `json:"data"`
-	Includes []*Includes `json:"includes"`
-	Meta     []*Meta     `json:"meta"`
-	Errors   []APIError  `json:"errors"`
+	Tweets   []Tweet    `json:"data"`
+	Includes *Includes  `json:"includes"`
+	Meta     *Meta      `json:"meta"`
+	Errors   []APIError `json:"errors"`
 }
