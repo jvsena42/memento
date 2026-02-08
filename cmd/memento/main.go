@@ -42,4 +42,16 @@ func main() {
 	}
 
 	slog.Info("database ready")
+
+	// Initialize capsule store
+	_ = storage.NewCapsuleStore(db)
+
+	// TODO Phase 2: Initialize Twitter client
+	// TODO Phase 3: Start mention poller
+	// TODO Phase 4: Start scheduler
+
+	slog.Info("memento bot started 🕰️")
+
+	// Block forever (will be replaced with signal handling in Phase 5)
+	select {}
 }

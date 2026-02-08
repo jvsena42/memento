@@ -1,3 +1,11 @@
+package storage
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"time"
+)
 
 type Capsule struct {
 	ID              int64
@@ -17,7 +25,7 @@ type CapsuleStore struct {
 	db *DB
 }
 
-fun NewCapsuleStore(db *DB) *CapsuleStore {
+func NewCapsuleStore(db *DB) *CapsuleStore {
 	return &CapsuleStore{db: db}
 }
 
@@ -39,9 +47,9 @@ func (s *CapsuleStore) Create(c *Capsule) error {
 	return nil
 }
 
-func (s *CapsuleStore) TweetAlreadySaved (TweetID string) (bool,err) {
+func (s *CapsuleStore) TweetAlreadySaved(TweetID string) (bool, error) {
 	var count int
-	err := s.db.Conn.QueryRow("SELECT COUNT(*) FROM capsules WHERE tweet_id = ?", tweetID).Scan(&count)
+	err := s.db.Conn.QueryRow("SELECT COUNT(*) FROM capsules WHERE tweet_id = ?", TweetID).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("checking tweet existence: %w", err)
 	}
