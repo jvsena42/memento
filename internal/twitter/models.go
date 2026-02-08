@@ -28,3 +28,22 @@ type Meta struct {
 	PreviousToken string `json:"previous_token"`
 	ResultCount   int    `json:"result_count"`
 }
+
+type Includes struct {
+	Tweets []Tweet `json:"tweets"`
+	Users  []User  `json:"users"`
+}
+
+type TweetResponse struct {
+	Tweet    Tweet       `json:"data"`
+	Includes []*Includes `json:"includes"`
+	Meta     []*Meta     `json:"meta"`
+	Errors   []APIError  `json:"errors"`
+}
+
+type TweetsResponse struct {
+	Tweets   []Tweet     `json:"data"`
+	Includes []*Includes `json:"includes"`
+	Meta     []*Meta     `json:"meta"`
+	Errors   []APIError  `json:"errors"`
+}
