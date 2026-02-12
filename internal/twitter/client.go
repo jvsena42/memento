@@ -2,7 +2,10 @@ package twitter
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/dghubble/oauth1"
 
@@ -28,4 +31,32 @@ func NewClient(cfg *config.Config) *Client {
 		BaseUrl:       "https://api.twitter.com",
 		BotUserID:     "",
 	}
+}
+
+func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error) {
+	fullUrl, err := url.Parse(c.BaseUrl + endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	query := fullUrl.Query()
+	for key, value := range params {
+		query.Set(key, value)
+	}
+
+	fullUrl.RawQuery = query.Encode()
+
+	resp, err := c.Authenticated.Get(fullUrl.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	return body, err
+
 }
