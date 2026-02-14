@@ -62,7 +62,7 @@ func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error
 	return body, err
 }
 
-func (c *Client) doPost(endpoint string, params map[string]string) ([]byte, error) {
+func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
 	url := c.BaseUrl + endpoint
 
 	jsonBody, err := json.Marshal(params)
