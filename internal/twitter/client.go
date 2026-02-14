@@ -18,6 +18,7 @@ type Client struct {
 	Authenticated *http.Client
 	BotUserID     string
 	BaseUrl       string
+	SinceID       string
 }
 
 func NewClient(cfg *config.Config) *Client {
@@ -32,6 +33,7 @@ func NewClient(cfg *config.Config) *Client {
 		Authenticated: config.Client(context.Background(), token),
 		BaseUrl:       "https://api.twitter.com",
 		BotUserID:     "",
+		SinceID:       "",
 	}
 }
 
