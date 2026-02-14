@@ -1,7 +1,9 @@
 package twitter
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,19 +36,19 @@ func NewClient(cfg *config.Config) *Client {
 }
 
 func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error) {
-	fullUrl, err := url.Parse(c.BaseUrl + endpoint)
+	url, err := url.Parse(c.BaseUrl + endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	query := fullUrl.Query()
+	query := url.Query()
 	for key, value := range params {
 		query.Set(key, value)
 	}
 
-	fullUrl.RawQuery = query.Encode()
+	url.RawQuery = query.Encode()
 
-	resp, err := c.Authenticated.Get(fullUrl.String())
+	resp, err := c.Authenticated.Get(url.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
@@ -58,5 +60,30 @@ func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error
 	}
 
 	return body, err
+}
 
+func (c *Client) doPost(endpoint string, params map[string]string) ([]byte, error) {
+	url := c.BaseUrl + endpoint
+
+	jsonBody, err := json.Marshal(params)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to marshal params: %w", err)
+	}
+
+	resp, err := c.Authenticated.Post(url, "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("api error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	return body, nil
 }
