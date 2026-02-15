@@ -35,9 +35,16 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 	requesterHandler := findUser(users, mention.AuthorID)
 
 	if h.CapsuleStore.TweetAlreadySaved(targetTweet.Tweet.ID) {
+		h.Client.PostTweet("This one's already saved! ⏳", "", mention.ID)
+		return nil
+	}
+
+	if h.CapsuleStore.UserSavedToday()(mention.AuthorID) {
 		h.Client.PostTweet("Come back tomorrow! 🕰️", "", mention.ID)
 		return nil
 	}
+
+	
 }
 
 func findUser(users []twitter.User, userID string) string {
