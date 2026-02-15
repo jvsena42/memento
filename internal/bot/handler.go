@@ -30,7 +30,11 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to fetch target tweet: %w", err)
 	}
 
-	tweetAuthor := findUser(targetTweet.Includes.Users, targetTweet.Tweet.AuthorID)
+	var tweetUsers []twitter.User
+	if targetTweet.Includes != nil {
+		tweetUsers = targetTweet.Includes.Users
+	}
+	tweetAuthor := findUser(tweetUsers, targetTweet.Tweet.AuthorID)
 
 	requesterHandler := findUser(users, mention.AuthorID)
 
@@ -62,7 +66,16 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		RepublishAt:     time.Now().Add(h.Config.RepublishDelay),
 	}
 
-	h.CapsuleStore.Create(&capsule)
+	if err := h.CapsuleStore.Create(&capsule); err != nil {
+		return fmt.Errorf("failed to create capsule: %w", err)
+	}
+
+	date := capsule.RepublishAt.Format("05/Feb/2031")
+	h.Client.PostTweet(
+		fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
+		"", mention.ID,
+	)
+
 	return nil
 }
 
