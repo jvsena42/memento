@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"os/user"
 
 	"github.com/jvsena42/memento/internal/config"
 	"github.com/jvsena42/memento/internal/storage"
@@ -29,4 +30,16 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to fetch target tweet: %w", err)
 	}
 
+	tweetAuthor := findUser(targetTweet.Includes.Users, targetTweet.Tweet.AuthorID)
+
+	requesterHandler := findUser(users, mention.AuthorID)
+}
+
+func findUser(users []twitter.User, userID string) string {
+	for _, user : = range users {
+		if user.ID == userID {
+			return user.UserName
+		}
+	}
+	return ""
 }
