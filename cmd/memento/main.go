@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
+	"github.com/jvsena42/memento/internal/bot"
 	"github.com/jvsena42/memento/internal/config"
 	"github.com/jvsena42/memento/internal/storage"
+	"github.com/jvsena42/memento/internal/twitter"
 )
 
 func main() {
@@ -43,12 +46,16 @@ func main() {
 
 	slog.Info("database ready")
 
-	// Initialize capsule store
-	_ = storage.NewCapsuleStore(db)
+	capsuleStore := storage.NewCapsuleStore(db)
 
-	// TODO Phase 2: Initialize Twitter client
-	// TODO Phase 3: Start mention poller
-	// TODO Phase 4: Start scheduler
+	twitterClient := twitter.NewClient(cfg)
+
+	botHandler := bot.Handler{
+		Client:       twitterClient,
+		CapsuleStore: capsuleStore,
+		Config:       cfg,
+	}
+	go botHandler.StartPoller(context.Background())
 
 	slog.Info("memento bot started 🕰️")
 
