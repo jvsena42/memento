@@ -1,7 +1,9 @@
 package bot
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jvsena42/memento/internal/config"
@@ -77,6 +79,43 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 	)
 
 	return nil
+}
+
+func (h *Handler) StartPoller(ctx context.Context) {
+
+	ticker := time.NewTicker(h.Config.PollInterval)
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			tweetsResponse, err := h.Client.GetMentions()
+
+			if err != nil {
+				slog.Error("error fetching mentions", "error", err)
+				continue
+			}
+
+			for _, err := range tweetsResponse.Errors {
+				slog.Error("error for tweetsResponse", "error", err)
+			}
+
+			var users []twitter.User
+			if tweetsResponse.Includes != nil {
+				users = tweetsResponse.Includes.Users
+			}
+
+			for _, tweet := range tweetsResponse.Tweets {
+				if err := h.ProcessMention(tweet, users); err != nil {
+					slog.Error("error processing mention", "tweet_id", tweet.ID, "error", err)
+				}
+			}
+		case <-ctx.Done():
+			slog.Info("pooler stopped")
+			return
+		}
+		ctx.Done()
+	}
 }
 
 func findUser(users []twitter.User, userID string) string {
