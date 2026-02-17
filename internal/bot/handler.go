@@ -72,7 +72,7 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to create capsule: %w", err)
 	}
 
-	date := capsule.RepublishAt.Format("05/Feb/2031")
+	date := capsule.RepublishAt.Format("02/Jan/2006")
 	h.Client.PostTweet(
 		fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
 		"", mention.ID,
@@ -114,7 +114,6 @@ func (h *Handler) StartPoller(ctx context.Context) {
 			slog.Info("pooler stopped")
 			return
 		}
-		ctx.Done()
 	}
 }
 
