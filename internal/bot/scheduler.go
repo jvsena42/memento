@@ -51,7 +51,7 @@ func (s *Scheduler) PublishDueCapsules() {
 		if response != nil { // Tweet exists
 			_, err := s.Client.PostTweet(fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
 			if err != nil {
-				slog.Error("error publishing twwet", "error", err)
+				slog.Error("error publishing tweet", "error", err)
 				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
 
 			} else {
@@ -62,7 +62,6 @@ func (s *Scheduler) PublishDueCapsules() {
 }
 
 func (s *Scheduler) StartScheduler(ctx context.Context) {
-
 	interval := 1 * time.Hour
 	if s.Config.DevMode {
 		interval = 1 * time.Minute
