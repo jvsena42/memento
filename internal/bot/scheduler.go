@@ -1,8 +1,10 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jvsena42/memento/internal/config"
 	"github.com/jvsena42/memento/internal/storage"
@@ -35,7 +37,7 @@ func (s *Scheduler) PublishDueCapsules() {
 		if response != nil { // Tweet exists
 			_, err := s.Client.PostTweet(fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
 			if err != nil {
-				slog.Error("error fetching twwet", "error", err)
+				slog.Error("error publishing twwet", "error", err)
 				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
 
 			} else {
@@ -49,14 +51,28 @@ func (s *Scheduler) PublishDueCapsules() {
 			)
 			_, err := s.Client.PostTweet(text, "", "")
 			if err != nil {
-				slog.Error("error fetching twwet", "error", err)
+				slog.Error("error publishing twwet", "error", err)
 				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
 
 			} else {
 				s.CapsuleStore.UpdateStatus(capsule.ID, "published")
 			}
 		}
-
 	}
+}
 
+func (s *Scheduler) StartScheduler(ctx context.Context) {
+	ticker := time.NewTicker(s.Config.RepublishDelay)
+
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.PublishDueCapsules()
+		case <-ctx.Done():
+			slog.Info("scheduler stopped")
+			return
+		}
+	}
 }
