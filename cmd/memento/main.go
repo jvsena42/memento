@@ -4,6 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/jvsena42/memento/internal/bot"
 	"github.com/jvsena42/memento/internal/config"
@@ -37,7 +40,6 @@ func main() {
 		slog.Error("failed to open database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
 
 	if err := db.Migrate("migrations"); err != nil {
 		slog.Error("failed to run migrations", "error", err)
@@ -50,22 +52,46 @@ func main() {
 
 	twitterClient := twitter.NewClient(cfg)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
 	botHandler := bot.Handler{
 		Client:       twitterClient,
 		CapsuleStore: capsuleStore,
 		Config:       cfg,
 	}
-	go botHandler.StartPoller(context.Background())
+
+	// Launch goroutines with wg tracking:
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		botHandler.StartPoller(ctx)
+	}()
 
 	botScheduler := bot.Scheduler{
 		Client:       twitterClient,
 		CapsuleStore: capsuleStore,
 		Config:       cfg,
 	}
-	go botScheduler.StartScheduler(context.Background())
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		botScheduler.StartScheduler(ctx)
+	}()
 
 	slog.Info("memento bot started 🕰️")
 
-	// Block forever (will be replaced with signal handling in Phase 5)
-	select {}
+	// Set up signal listening:
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Block until signal received (replaces select{}):
+	<-sigChan
+	slog.Info("shutting down...")
+
+	// Trigger shutdown:
+	cancel()   // signals both goroutines via ctx.Done()
+	wg.Wait()  // waits until both goroutines return
+	db.Close() // clean up database
+	slog.Info("shutdown complete")
 }
