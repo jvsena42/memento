@@ -57,6 +57,13 @@ func main() {
 	}
 	go botHandler.StartPoller(context.Background())
 
+	botScheduler := bot.Scheduler{
+		Client:       twitterClient,
+		CapsuleStore: capsuleStore,
+		Config:       cfg,
+	}
+	go botScheduler.StartScheduler(context.Background())
+
 	slog.Info("memento bot started 🕰️")
 
 	// Block forever (will be replaced with signal handling in Phase 5)
