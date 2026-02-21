@@ -62,7 +62,13 @@ func (s *Scheduler) PublishDueCapsules() {
 }
 
 func (s *Scheduler) StartScheduler(ctx context.Context) {
-	ticker := time.NewTicker(s.Config.RepublishDelay)
+
+	interval := 1 * time.Hour
+	if s.Config.DevMode {
+		interval = 1 * time.Minute
+	}
+
+	ticker := time.NewTicker(interval)
 
 	defer ticker.Stop()
 
