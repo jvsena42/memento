@@ -89,3 +89,19 @@ func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
 
 	return body, nil
 }
+
+func (c *Client) doRequest(req *http.Request) ([]byte, int, error) {
+	// Make the request
+	resp, err := c.Authenticated.Do(req)
+	if err != nil {
+		return nil, 0, err // Network error, no status code
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, resp.StatusCode, err
+	}
+
+	return body, resp.StatusCode, nil
+}
