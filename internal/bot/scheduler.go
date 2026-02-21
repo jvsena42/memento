@@ -29,27 +29,27 @@ func (s *Scheduler) PublishDueCapsules() {
 		response, err := s.Client.GetTweet(capsule.TweetID)
 
 		if err != nil {
-			slog.Error("error fetching twwet", "error", err)
-			s.CapsuleStore.UpdateStatus(capsule.ID, "deleted")
-			continue
-		}
 
-		if response != nil { // Tweet exists
-			_, err := s.Client.PostTweet(fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
-			if err != nil {
-				slog.Error("error publishing twwet", "error", err)
-				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
-
-			} else {
-				s.CapsuleStore.UpdateStatus(capsule.ID, "published")
-			}
-		} else {
 			text := fmt.Sprintf("🕰️ @%s saved this memory 5 years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
 				capsule.RequesterHandle,
 				capsule.TweetText,
 				capsule.TweetID,
 			)
-			_, err := s.Client.PostTweet(text, "", "")
+
+			_, postErr := s.Client.PostTweet(text, "", "")
+			if postErr != nil {
+				slog.Error("error posting deleted capsule", "error", postErr)
+				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
+
+			} else {
+				s.CapsuleStore.UpdateStatus(capsule.ID, "deleted")
+			}
+
+			continue
+		}
+
+		if response != nil { // Tweet exists
+			_, err := s.Client.PostTweet(fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
 			if err != nil {
 				slog.Error("error publishing twwet", "error", err)
 				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
@@ -67,7 +67,6 @@ func (s *Scheduler) StartScheduler(ctx context.Context) {
 	if s.Config.DevMode {
 		interval = 1 * time.Minute
 	}
-
 	ticker := time.NewTicker(interval)
 
 	defer ticker.Stop()
