@@ -51,7 +51,7 @@ func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error
 
 	url.RawQuery = query.Encode()
 
-	req, err := http.NewRequest("POST", url.String(), nil)
+	req, err := http.NewRequest("GET", url.String(), nil)
 
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
