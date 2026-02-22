@@ -29,6 +29,7 @@ func (s *Scheduler) PublishDueCapsules() {
 		response, err := s.Client.GetTweet(capsule.TweetID)
 
 		if err != nil {
+			// TODO Handle protected/suspended accounts
 
 			text := fmt.Sprintf("🕰️ @%s saved this memory 5 years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
 				capsule.RequesterHandle,
