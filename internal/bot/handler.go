@@ -104,7 +104,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 				slog.Error("error for tweetsResponse", "error", err)
 			}
 
-			if tweetsResponse.Tweets == nil || len(tweetsResponse.Tweets) == 0 {
+			if len(tweetsResponse.Tweets) == 0 {
 				continue
 			}
 
