@@ -19,6 +19,10 @@ type Handler struct {
 
 func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) error {
 
+	if mention.AuthorID == h.Client.BotUserID {
+		return nil
+	}
+
 	var targetTweet *twitter.TweetResponse
 	var err error
 
