@@ -78,6 +78,7 @@ func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 
 	body, err := c.doRequestWithRetry(req)
 
