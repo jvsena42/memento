@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
+	"time"
 
 	"github.com/dghubble/oauth1"
 
@@ -57,8 +60,6 @@ func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-
 	body, err := c.doRequestWithRetry(req)
 
 	return body, err
@@ -83,44 +84,47 @@ func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
 	return body, err
 }
 
-func (c *Client) doRequest(req *http.Request) ([]byte, int, error) {
+func (c *Client) doRequest(req *http.Request) ([]byte, int, http.Header, error) {
 	// Make the request
 	resp, err := c.Authenticated.Do(req)
 	if err != nil {
-		return nil, 0, err // Network error, no status code
+		return nil, 0, nil, err // Network error, no status code
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, resp.StatusCode, err
+		return nil, resp.StatusCode, resp.Header, err
 	}
 
-	return body, resp.StatusCode, nil
+	return body, resp.StatusCode, resp.Header, nil
 }
 
 func (c *Client) doRequestWithRetry(req *http.Request) ([]byte, error) {
 	maxRetries := 3
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		body, statusCode, err := c.doRequest(req)
+		body, statusCode, header, err := c.doRequest(req)
 
 		//Network error
 		if err != nil {
-			delay(math.Pow(2, float64(attempt))) * time.Seconds
+			time.Sleep(time.Duration(math.Pow(2, float64(attempt))) * time.Second)
 			continue
 		}
 
 		// Rate Limit -> wait until reset time
 		if statusCode == 429 {
-			resp := bytes.NewReader(body)
-			delay(resp.body.rateLimit+1) * time.Seconds
+			resetStr := header.Get("x-rate-limit-reset")
+			resetUnix, _ := strconv.ParseInt(resetStr, 10, 64)
+			waitTime := time.Until(time.Unix(resetUnix, 0)) + 1*time.Second
+			slog.Warn("rate limited, waiting", "seconds", waitTime.Seconds())
+			time.Sleep(waitTime)
 			continue
 		}
 
 		// Server error -> wait and retry
 		if statusCode >= 500 {
-			delay(math.Pow(2, float64(attempt))) * time.Seconds
+			time.Sleep(time.Duration(math.Pow(2, float64(attempt))) * time.Second)
 			continue
 		}
 
