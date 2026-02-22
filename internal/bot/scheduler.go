@@ -40,10 +40,13 @@ func (s *Scheduler) PublishDueCapsules() {
 			_, postErr := s.Client.PostTweet(text, "", "")
 			if postErr != nil {
 				slog.Error("error posting deleted capsule", "error", postErr)
-				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
-
+				if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
+					slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+				}
 			} else {
-				s.CapsuleStore.UpdateStatus(capsule.ID, "deleted")
+				if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
+					slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+				}
 			}
 
 			continue
@@ -53,10 +56,13 @@ func (s *Scheduler) PublishDueCapsules() {
 			_, err := s.Client.PostTweet(fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
 			if err != nil {
 				slog.Error("error publishing tweet", "error", err)
-				s.CapsuleStore.UpdateStatus(capsule.ID, "failed")
-
+				if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
+					slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+				}
 			} else {
-				s.CapsuleStore.UpdateStatus(capsule.ID, "published")
+				if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
+					slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+				}
 			}
 		}
 	}
