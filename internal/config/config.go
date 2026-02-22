@@ -21,6 +21,7 @@ type Config struct {
 	TwitterAccessSecret string
 	BotHandle           string
 	DatabasePath        string
+	BotUserID           string
 	DevMode             bool
 	PollInterval        time.Duration
 	RepublishDelay      time.Duration
@@ -37,6 +38,7 @@ func Load() (*Config, error) {
 		TwitterAccessSecret: os.Getenv("TWITTER_ACCESS_SECRET"),
 		BotHandle:           os.Getenv("BOT_HANDLE"),
 		DatabasePath:        os.Getenv("DATABASE_PATH"),
+		BotUserID:           os.Getenv("BOT_USER_ID"),
 		DevMode:             os.Getenv("DEV_MODE") == "true",
 	}
 
@@ -88,6 +90,7 @@ func (c *Config) validate() error {
 		"TWITTER_API_SECRET":    c.TwitterAPISecret,
 		"TWITTER_ACCESS_TOKEN":  c.TwitterAccessToken,
 		"TWITTER_ACCESS_SECRET": c.TwitterAccessSecret,
+		"BOT_USER_ID":           c.BotUserID,
 	}
 
 	for name, value := range required {

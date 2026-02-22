@@ -36,7 +36,7 @@ func NewClient(cfg *config.Config) *Client {
 	return &Client{
 		Authenticated: config.Client(context.Background(), token),
 		BaseUrl:       "https://api.twitter.com",
-		BotUserID:     "",
+		BotUserID:     cfg.BotUserID,
 		SinceID:       "",
 	}
 }
