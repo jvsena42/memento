@@ -104,6 +104,10 @@ func (h *Handler) StartPoller(ctx context.Context) {
 				slog.Error("error for tweetsResponse", "error", err)
 			}
 
+			if tweetsResponse.Tweets == nil || len(tweetsResponse.Tweets) == 0 {
+				continue
+			}
+
 			var users []twitter.User
 			if tweetsResponse.Includes != nil {
 				users = tweetsResponse.Includes.Users
