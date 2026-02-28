@@ -130,3 +130,22 @@ func (s *CapsuleStore) GetByID(id int64) (*Capsule, error) {
 	}
 	return &c, nil
 }
+
+func (s *CapsuleStore) GetValue(key string) (string, error) {
+	var value string
+	err := s.db.Conn.QueryRow("SELECT value FROM key_value WHERE key = ?", key).Scan(&value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("getting key %s: %w", key, err)
+	}
+	return value, nil
+}
+
+func (s *CapsuleStore) SetValue(key string, value string) error {
+	if _, err := s.db.Conn.Exec("INSERT OR REPLACE INTO key_value (key, value) VALUES (?, ?)", key, value); err != nil {
+		return fmt.Errorf("error setting value %s: %w", value, err)
+	}
+	return nil
+}
