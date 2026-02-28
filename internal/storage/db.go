@@ -107,6 +107,16 @@ func (db *DB) Migrate(migrationsDir string) error {
 	return nil
 }
 
+func (db *DB) GetValue(key string) (string, error) {
+	var value string
+	err := db.Conn.QueryRow("SELECT value FROM key_value WHERE key = ?").Scan(&value)
+	if err != nil {
+		return "", fmt.Errorf("getting key %s: %w", key, err)
+	}
+
+	return key, nil
+}
+
 func (db *DB) Close() error {
 	return db.Conn.Close()
 }
