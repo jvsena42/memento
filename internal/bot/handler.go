@@ -133,7 +133,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 				}
 			}
 		case <-ctx.Done():
-			slog.Info("pooler stopped")
+			slog.Info("poller stopped")
 			return
 		}
 	}
