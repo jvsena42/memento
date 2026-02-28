@@ -11,6 +11,8 @@ import (
 	"github.com/jvsena42/memento/internal/twitter"
 )
 
+const LAST_MENTION_ID = "last_mention_id"
+
 type Handler struct {
 	Client       *twitter.Client
 	CapsuleStore *storage.CapsuleStore
@@ -86,6 +88,12 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 }
 
 func (h *Handler) StartPoller(ctx context.Context) {
+	sinceID, err := h.CapsuleStore.GetValue(LAST_MENTION_ID)
+	if err != nil {
+		slog.Warn("failed to load last mention id", "error", err)
+	} else {
+		h.Client.SinceID = sinceID
+	}
 
 	ticker := time.NewTicker(h.Config.PollInterval)
 
@@ -98,6 +106,12 @@ func (h *Handler) StartPoller(ctx context.Context) {
 			if err != nil {
 				slog.Error("error fetching mentions", "error", err)
 				continue
+			}
+
+			if h.Client.SinceID != "" {
+				if err := h.CapsuleStore.SetValue(LAST_MENTION_ID, h.Client.SinceID); err != nil {
+					slog.Error("failed to save last mention id", "error", err)
+				}
 			}
 
 			for _, err := range tweetsResponse.Errors {
