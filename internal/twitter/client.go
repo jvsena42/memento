@@ -54,13 +54,7 @@ func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error
 
 	url.RawQuery = query.Encode()
 
-	req, err := http.NewRequest("GET", url.String(), nil)
-
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-
-	body, err := c.doRequestWithRetry(req)
+	body, err := c.doRequestWithRetry("GET", url.String(), nil)
 
 	return body, err
 }
@@ -73,14 +67,7 @@ func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal params: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonBody))
-
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	body, err := c.doRequestWithRetry(req)
+	body, err := c.doRequestWithRetry("POST", url, jsonBody)
 
 	return body, err
 }
@@ -101,11 +88,22 @@ func (c *Client) doRequest(req *http.Request) ([]byte, int, http.Header, error) 
 	return body, resp.StatusCode, resp.Header, nil
 }
 
-func (c *Client) doRequestWithRetry(req *http.Request) ([]byte, error) {
+func (c *Client) doRequestWithRetry(method string, url string, body []byte) ([]byte, error) {
 	maxRetries := 3
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		body, statusCode, header, err := c.doRequest(req)
+		req, err := http.NewRequest(method, url, bytes.NewReader(body))
+
+		if err != nil {
+			slog.Warn("request creation failed", "error", err)
+			time.Sleep(time.Duration(math.Pow(2, float64(attempt))) * time.Second)
+			continue
+		}
+
+		if method == "POST" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		respBody, statusCode, header, err := c.doRequest(req)
 
 		//Network error
 		if err != nil {
@@ -131,11 +129,11 @@ func (c *Client) doRequestWithRetry(req *http.Request) ([]byte, error) {
 
 		// Client error (400, 401, 404) → don't retry
 		if statusCode < 200 || statusCode >= 300 {
-			return nil, fmt.Errorf("api error (status %d): %s", statusCode, string(body))
+			return nil, fmt.Errorf("api error (status %d): %s", statusCode, string(respBody))
 		}
 
 		// Success
-		return body, nil
+		return respBody, nil
 	}
 
 	return nil, fmt.Errorf("max retries exceeded")
