@@ -44,7 +44,17 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 	}
 	tweetAuthor := findUser(tweetUsers, targetTweet.Tweet.AuthorID)
 
+	if tweetAuthor == "" {
+		slog.Warn("tweetAuthor not found", "mentionID", mention.ID, "authorID", targetTweet.Tweet.AuthorID)
+		return nil
+	}
+
 	requesterHandler := findUser(users, mention.AuthorID)
+
+	if requesterHandler == "" {
+		slog.Warn("requesterHandler not found", "mentionID", mention.ID, "authorID", mention.AuthorID)
+		return nil
+	}
 
 	saved, err := h.CapsuleStore.TweetAlreadySaved(targetTweet.Tweet.ID)
 	if err != nil {
