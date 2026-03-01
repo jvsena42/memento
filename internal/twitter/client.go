@@ -127,7 +127,15 @@ func (c *Client) doRequestWithRetry(method string, url string, body []byte) ([]b
 			continue
 		}
 
-		// Client error (400, 401, 404) → don't retry
+		if statusCode == 404 {
+			return nil, ErrNotFound
+		}
+
+		if statusCode == 403 {
+			return nil, ErrForbidden
+		}
+
+		// Other client errors (400, 401, etc.) → don't retry
 		if statusCode < 200 || statusCode >= 300 {
 			return nil, fmt.Errorf("api error (status %d): %s", statusCode, string(respBody))
 		}
