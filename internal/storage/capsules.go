@@ -58,7 +58,7 @@ func (s *CapsuleStore) TweetAlreadySaved(TweetID string) (bool, error) {
 }
 
 func (s *CapsuleStore) UserSavedToday(requesterID string) (bool, error) {
-	today := time.Now().Truncate(24 * time.Hour)
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 	tomorrow := today.Add(24 * time.Hour)
 
 	var count int

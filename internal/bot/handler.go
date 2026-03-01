@@ -71,7 +71,7 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		TweetAuthor:     tweetAuthor,
 		TweetText:       targetTweet.Tweet.Text,
 		IsReply:         mention.InReplyToUserID != nil,
-		RepublishAt:     time.Now().Add(h.Config.RepublishDelay),
+		RepublishAt:     time.Now().UTC().Add(h.Config.RepublishDelay),
 	}
 
 	if err := h.CapsuleStore.Create(&capsule); err != nil {
