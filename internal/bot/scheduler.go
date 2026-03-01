@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -28,8 +29,15 @@ func (s *Scheduler) PublishDueCapsules() {
 	for _, capsule := range capsules {
 		response, err := s.Client.GetTweet(capsule.TweetID)
 
-		if err != nil {
-			// TODO Handle protected/suspended accounts
+		if errors.Is(err, twitter.ErrForbidden) {
+			slog.Error("error publishing capsule", "error", err)
+			if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
+				slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+			}
+			continue
+		}
+
+		if errors.Is(err, twitter.ErrNotFound) {
 
 			text := fmt.Sprintf("🕰️ @%s saved this memory 5 years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
 				capsule.RequesterHandle,
@@ -49,6 +57,11 @@ func (s *Scheduler) PublishDueCapsules() {
 				}
 			}
 
+			continue
+		}
+
+		if err != nil {
+			slog.Error("error fetching tweet", "error", err)
 			continue
 		}
 
