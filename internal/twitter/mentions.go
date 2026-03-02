@@ -13,18 +13,43 @@ func (c *Client) GetMentions() (*TweetsResponse, error) {
 	if c.SinceID != "" {
 		params["since_id"] = c.SinceID
 	}
-	respBytes, err := c.doGet(fmt.Sprintf("/2/users/%s/mentions", c.BotUserID), params)
-	if err != nil {
-		return nil, err
-	}
 
+	var allTweets []Tweet
+	var allUsers []User
+	var allIncludedTweets []Tweet
+	maxPages := 10
 	var response TweetsResponse
-	if err := json.Unmarshal(respBytes, &response); err != nil {
-		return nil, err
+	for page := 0; page < maxPages; page++ {
+		respBytes, err := c.doGet(fmt.Sprintf("/2/users/%s/mentions", c.BotUserID), params)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(respBytes, &response); err != nil {
+			return nil, err
+		}
+
+		allTweets = append(allTweets, response.Tweets...)
+
+		if response.Includes != nil {
+			allUsers = append(allUsers, response.Includes.Users...)
+			allIncludedTweets = append(allIncludedTweets, response.Includes.Tweets...)
+		}
+
+		if page == 0 && response.Meta != nil && response.Meta.NewestID != "" {
+			c.SinceID = response.Meta.NewestID
+		}
+
+		if response.Meta == nil || response.Meta.NextToken == "" {
+			break
+		}
+
+		params["pagination_token"] = response.Meta.NextToken
 	}
 
-	if response.Meta != nil {
-		c.SinceID = response.Meta.NewestID
+	response.Tweets = allTweets
+	response.Includes = &Includes{
+		Users:  allUsers,
+		Tweets: allIncludedTweets,
 	}
 
 	return &response, nil
