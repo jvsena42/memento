@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const capsuleBatchSize = 50
+
 type Capsule struct {
 	ID              int64
 	RequesterID     string
@@ -79,7 +81,11 @@ func (s *CapsuleStore) GetDueCapsules() ([]Capsule, error) {
 		FROM capsules
 		WHERE status = 'pending' AND republish_at <= ?
 		ORDER BY republish_at ASC
-	`, time.Now().UTC())
+		LIMIT ?
+	`,
+		time.Now().UTC(),
+		capsuleBatchSize,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("querying due capsules: %w", err)
 	}
