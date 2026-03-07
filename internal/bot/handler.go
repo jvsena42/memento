@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -182,4 +183,26 @@ func findUser(users []twitter.User, userID string) string {
 		}
 	}
 	return ""
+}
+
+// parseYear extracts the first number separated by spaces from the text and returns it as int.
+func parseYear(text string, min int, max int) int {
+	// strings.Fields splits the string around each instance of one or more consecutive white space characters.
+	words := strings.Fields(text)
+
+	var year int
+	for _, word := range words {
+		// Attempt to convert the word to an integer
+		if val, err := strconv.Atoi(word); err == nil {
+			year = val
+			break
+		}
+	}
+
+	if year < min || year > max {
+		return max
+	}
+
+	// Return the fallback if no valid integer was found
+	return year
 }
