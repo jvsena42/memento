@@ -34,7 +34,7 @@ func New(dbPath string) (*DB, error) {
 
 	// Enable foreign keys
 	if _, err := conn.Exec("PRAGMA foreign_keys=ON"); err != nil {
-		return nil, fmt.Errorf("enabilng foreign keys: %w", err)
+		return nil, fmt.Errorf("enabling foreign keys: %w", err)
 	}
 
 	return &DB{Conn: conn}, nil
