@@ -41,7 +41,7 @@ func NewClient(cfg *config.Config) *Client {
 	}
 }
 
-func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error) {
+func (c *Client) doGet(ctx context.Context, endpoint string, params map[string]string) ([]byte, error) {
 	url, err := url.Parse(c.BaseUrl + endpoint)
 	if err != nil {
 		return nil, err
@@ -54,12 +54,12 @@ func (c *Client) doGet(endpoint string, params map[string]string) ([]byte, error
 
 	url.RawQuery = query.Encode()
 
-	body, err := c.doRequestWithRetry("GET", url.String(), nil)
+	body, err := c.doRequestWithRetry(ctx, "GET", url.String(), nil)
 
 	return body, err
 }
 
-func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
+func (c *Client) doPost(ctx context.Context, endpoint string, params interface{}) ([]byte, error) {
 	url := c.BaseUrl + endpoint
 
 	jsonBody, err := json.Marshal(params)
@@ -67,7 +67,7 @@ func (c *Client) doPost(endpoint string, params interface{}) ([]byte, error) {
 		return nil, fmt.Errorf("Failed to marshal params: %w", err)
 	}
 
-	body, err := c.doRequestWithRetry("POST", url, jsonBody)
+	body, err := c.doRequestWithRetry(ctx, "POST", url, jsonBody)
 
 	return body, err
 }
@@ -88,11 +88,11 @@ func (c *Client) doRequest(req *http.Request) ([]byte, int, http.Header, error) 
 	return body, resp.StatusCode, resp.Header, nil
 }
 
-func (c *Client) doRequestWithRetry(method string, url string, body []byte) ([]byte, error) {
+func (c *Client) doRequestWithRetry(ctx context.Context, method string, url string, body []byte) ([]byte, error) {
 	maxRetries := 3
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest(method, url, bytes.NewReader(body))
+		req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
 
 		if err != nil {
 			slog.Warn("request creation failed", "error", err)

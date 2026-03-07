@@ -1,11 +1,12 @@
 package twitter
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
 
-func (c *Client) GetMentions() (*TweetsResponse, error) {
+func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 	params := map[string]string{
 		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id",
 		"expansions":   "author_id",
@@ -20,7 +21,7 @@ func (c *Client) GetMentions() (*TweetsResponse, error) {
 	maxPages := 10
 	var response TweetsResponse
 	for page := 0; page < maxPages; page++ {
-		respBytes, err := c.doGet(fmt.Sprintf("/2/users/%s/mentions", c.BotUserID), params)
+		respBytes, err := c.doGet(ctx, fmt.Sprintf("/2/users/%s/mentions", c.BotUserID), params)
 		if err != nil {
 			return nil, err
 		}

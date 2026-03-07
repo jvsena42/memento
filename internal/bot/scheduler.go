@@ -22,7 +22,7 @@ type Scheduler struct {
 	Config       *config.Config
 }
 
-func (s *Scheduler) PublishDueCapsules() {
+func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
 	for {
 		capsules, err := s.CapsuleStore.GetDueCapsules()
@@ -37,7 +37,7 @@ func (s *Scheduler) PublishDueCapsules() {
 		}
 
 		for _, capsule := range capsules {
-			response, err := s.Client.GetTweet(capsule.TweetID)
+			response, err := s.Client.GetTweet(ctx, capsule.TweetID)
 
 			if errors.Is(err, twitter.ErrForbidden) {
 				slog.Error("error publishing capsule", "error", err)
@@ -62,7 +62,7 @@ func (s *Scheduler) PublishDueCapsules() {
 					capsule.TweetID,
 				)
 
-				_, postErr := s.Client.PostTweet(text, "", "")
+				_, postErr := s.Client.PostTweet(ctx, text, "", "")
 				if postErr != nil {
 					slog.Error("error posting deleted capsule", "error", postErr)
 					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
@@ -83,7 +83,7 @@ func (s *Scheduler) PublishDueCapsules() {
 			}
 
 			if response != nil { // Tweet exists
-				_, err := s.Client.PostTweet(fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
+				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
 				if err != nil {
 					slog.Error("error publishing tweet", "error", err)
 					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
@@ -113,7 +113,7 @@ func (s *Scheduler) StartScheduler(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			s.PublishDueCapsules()
+			s.PublishDueCapsules(ctx)
 		case <-ctx.Done():
 			slog.Info("scheduler stopped")
 			return

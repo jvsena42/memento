@@ -21,7 +21,7 @@ type Handler struct {
 	Config       *config.Config
 }
 
-func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) error {
+func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, users []twitter.User) error {
 
 	if mention.AuthorID == h.Client.BotUserID {
 		return nil
@@ -31,9 +31,9 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 	var err error
 
 	if mention.InReplyToUserID != nil {
-		targetTweet, err = h.Client.GetTweet(mention.ConversationID)
+		targetTweet, err = h.Client.GetTweet(ctx, mention.ConversationID)
 	} else {
-		targetTweet, err = h.Client.GetTweet(mention.ID)
+		targetTweet, err = h.Client.GetTweet(ctx, mention.ID)
 	}
 
 	if err != nil {
@@ -63,7 +63,7 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
 	if saved {
-		if _, err := h.Client.PostTweet("This one's already saved! ⏳", "", mention.ID); err != nil {
+		if _, err := h.Client.PostTweet(ctx, "This one's already saved! ⏳", "", mention.ID); err != nil {
 			slog.Warn("failed to reply 'already saved'", "error", err)
 		}
 		return nil
@@ -74,7 +74,7 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
 	if saved {
-		if _, err := h.Client.PostTweet("Come back tomorrow! 🕰️", "", mention.ID); err != nil {
+		if _, err := h.Client.PostTweet(ctx, "Come back tomorrow! 🕰️", "", mention.ID); err != nil {
 			slog.Warn("failed to reply 'come back tomorrow'", "error", err)
 		}
 		return nil
@@ -103,7 +103,7 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 	}
 
 	date := capsule.RepublishAt.Format("02/Jan/2006")
-	if _, err := h.Client.PostTweet(fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
+	if _, err := h.Client.PostTweet(ctx, fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
 		"", mention.ID); err != nil {
 		slog.Warn("failed to reply with confirmation", "error", err)
 	}
@@ -125,7 +125,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			tweetsResponse, err := h.Client.GetMentions()
+			tweetsResponse, err := h.Client.GetMentions(ctx)
 
 			if err != nil {
 				slog.Error("error fetching mentions", "error", err)
@@ -152,7 +152,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 			}
 
 			for _, tweet := range tweetsResponse.Tweets {
-				if err := h.ProcessMention(tweet, users); err != nil {
+				if err := h.ProcessMention(ctx, tweet, users); err != nil {
 					slog.Error("error processing mention", "tweet_id", tweet.ID, "error", err)
 				}
 			}

@@ -1,6 +1,9 @@
 package twitter
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
 
 type PostTweetRequest struct {
 	Text         string       `json:"text"`
@@ -12,12 +15,12 @@ type ReplyConfig struct {
 	InReplyToTweetID string `json:"in_reply_to_tweet_id"`
 }
 
-func (c *Client) GetTweet(id string) (*TweetResponse, error) {
+func (c *Client) GetTweet(ctx context.Context, id string) (*TweetResponse, error) {
 	params := map[string]string{
 		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id",
 		"expansions":   "author_id",
 	}
-	respBytes, err := c.doGet("/2/tweets/"+id, params)
+	respBytes, err := c.doGet(ctx, "/2/tweets/"+id, params)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +33,7 @@ func (c *Client) GetTweet(id string) (*TweetResponse, error) {
 	return &response, nil
 }
 
-func (c *Client) PostTweet(text string, quoteTweetID string, replyToID string) (*TweetResponse, error) {
+func (c *Client) PostTweet(ctx context.Context, text string, quoteTweetID string, replyToID string) (*TweetResponse, error) {
 	request := PostTweetRequest{
 		Text: text,
 	}
@@ -45,7 +48,7 @@ func (c *Client) PostTweet(text string, quoteTweetID string, replyToID string) (
 		}
 	}
 
-	respBytes, err := c.doPost("/2/tweets", request)
+	respBytes, err := c.doPost(ctx, "/2/tweets", request)
 	if err != nil {
 		return nil, err
 	}
