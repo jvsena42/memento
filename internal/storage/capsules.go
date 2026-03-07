@@ -151,7 +151,7 @@ func (s *CapsuleStore) GetValue(key string) (string, error) {
 
 func (s *CapsuleStore) SetValue(key string, value string) error {
 	if _, err := s.db.Conn.Exec("INSERT OR REPLACE INTO key_value (key, value) VALUES (?, ?)", key, value); err != nil {
-		return fmt.Errorf("error setting value %s: %w", value, err)
+		return fmt.Errorf("error setting value %s: %w", key, err)
 	}
 	return nil
 }
