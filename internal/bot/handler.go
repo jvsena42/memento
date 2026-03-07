@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jvsena42/memento/internal/config"
@@ -80,12 +81,18 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
+	trimmedText := strings.TrimSpace(targetTweet.Tweet.Text)
+	if trimmedText == "" {
+		slog.Warn("tweet text is empty, skipping", "tweet_id", targetTweet.Tweet.ID)
+		return nil
+	}
+
 	capsule := storage.Capsule{
 		RequesterID:     mention.AuthorID,
 		RequesterHandle: requesterHandler,
 		TweetID:         targetTweet.Tweet.ID,
 		TweetAuthor:     tweetAuthor,
-		TweetText:       targetTweet.Tweet.Text,
+		TweetText:       trimmedText,
 		IsReply:         mention.InReplyToUserID != nil,
 		RepublishAt:     time.Now().UTC().Add(h.Config.RepublishDelay),
 	}
