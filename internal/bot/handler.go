@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/jvsena42/memento/internal/config"
 	"github.com/jvsena42/memento/internal/storage"
 	"github.com/jvsena42/memento/internal/twitter"
+	"modernc.org/sqlite"
 )
 
 const LAST_MENTION_ID = "last_mention_id"
@@ -84,7 +86,15 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		RepublishAt:     time.Now().UTC().Add(h.Config.RepublishDelay),
 	}
 
-	if err := h.CapsuleStore.Create(&capsule); err != nil {
+	err = h.CapsuleStore.Create(&capsule)
+
+	if err != nil {
+		var sqliteErr *sqlite.Error
+		if errors.As(err, &sqliteErr) && sqliteErr.Code() == 2067 { // 2067 = SQLITE_CONSTRAINT_UNIQUE
+			slog.Debug("duplicate capsule, skipping", "tweet_id", capsule.TweetID)
+			return nil
+		}
+
 		return fmt.Errorf("failed to create capsule: %w", err)
 	}
 
