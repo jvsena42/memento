@@ -63,7 +63,9 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
 	if saved {
-		h.Client.PostTweet("This one's already saved! ⏳", "", mention.ID)
+		if _, err := h.Client.PostTweet("This one's already saved! ⏳", "", mention.ID); err != nil {
+			slog.Warn("failed to reply 'already saved'", "error", err)
+		}
 		return nil
 	}
 
@@ -72,7 +74,9 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
 	if saved {
-		h.Client.PostTweet("Come back tomorrow! 🕰️", "", mention.ID)
+		if _, err := h.Client.PostTweet("Come back tomorrow! 🕰️", "", mention.ID); err != nil {
+			slog.Warn("failed to reply 'come back tomorrow'", "error", err)
+		}
 		return nil
 	}
 
@@ -99,10 +103,10 @@ func (h *Handler) ProcessMention(mention twitter.Tweet, users []twitter.User) er
 	}
 
 	date := capsule.RepublishAt.Format("02/Jan/2006")
-	h.Client.PostTweet(
-		fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
-		"", mention.ID,
-	)
+	if _, err := h.Client.PostTweet(fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
+		"", mention.ID); err != nil {
+		slog.Warn("failed to reply with confirmation", "error", err)
+	}
 
 	return nil
 }
