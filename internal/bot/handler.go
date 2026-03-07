@@ -122,43 +122,48 @@ func (h *Handler) StartPoller(ctx context.Context) {
 	ticker := time.NewTicker(h.Config.PollInterval)
 
 	defer ticker.Stop()
+	h.pollMentions(ctx)
 	for {
 		select {
 		case <-ticker.C:
-			tweetsResponse, err := h.Client.GetMentions(ctx)
-
-			if err != nil {
-				slog.Error("error fetching mentions", "error", err)
-				continue
-			}
-
-			if h.Client.SinceID != "" {
-				if err := h.CapsuleStore.SetValue(LAST_MENTION_ID, h.Client.SinceID); err != nil {
-					slog.Error("failed to save last mention id", "error", err)
-				}
-			}
-
-			for _, err := range tweetsResponse.Errors {
-				slog.Error("error for tweetsResponse", "error", err)
-			}
-
-			if len(tweetsResponse.Tweets) == 0 {
-				continue
-			}
-
-			var users []twitter.User
-			if tweetsResponse.Includes != nil {
-				users = tweetsResponse.Includes.Users
-			}
-
-			for _, tweet := range tweetsResponse.Tweets {
-				if err := h.ProcessMention(ctx, tweet, users); err != nil {
-					slog.Error("error processing mention", "tweet_id", tweet.ID, "error", err)
-				}
-			}
+			h.pollMentions(ctx)
 		case <-ctx.Done():
 			slog.Info("poller stopped")
 			return
+		}
+	}
+}
+
+func (h *Handler) pollMentions(ctx context.Context) {
+	tweetsResponse, err := h.Client.GetMentions(ctx)
+
+	if err != nil {
+		slog.Error("error fetching mentions", "error", err)
+		return
+	}
+
+	if h.Client.SinceID != "" {
+		if err := h.CapsuleStore.SetValue(LAST_MENTION_ID, h.Client.SinceID); err != nil {
+			slog.Error("failed to save last mention id", "error", err)
+		}
+	}
+
+	for _, err := range tweetsResponse.Errors {
+		slog.Error("error for tweetsResponse", "error", err)
+	}
+
+	if len(tweetsResponse.Tweets) == 0 {
+		return
+	}
+
+	var users []twitter.User
+	if tweetsResponse.Includes != nil {
+		users = tweetsResponse.Includes.Users
+	}
+
+	for _, tweet := range tweetsResponse.Tweets {
+		if err := h.ProcessMention(ctx, tweet, users); err != nil {
+			slog.Error("error processing mention", "tweet_id", tweet.ID, "error", err)
 		}
 	}
 }

@@ -110,6 +110,8 @@ func (s *Scheduler) StartScheduler(ctx context.Context) {
 
 	defer ticker.Stop()
 
+	s.PublishDueCapsules(ctx)
+
 	for {
 		select {
 		case <-ticker.C:
