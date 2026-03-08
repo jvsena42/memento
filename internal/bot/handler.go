@@ -88,6 +88,8 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
+	years := parseYear(mention.Text, config.MinRepublishDelayYear, config.MaxRepublishDelayYear)
+	republishDelay := time.Duration(years) * 365 * 24 * time.Hour
 	capsule := storage.Capsule{
 		RequesterID:     mention.AuthorID,
 		RequesterHandle: requesterHandler,
@@ -95,7 +97,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		TweetAuthor:     tweetAuthor,
 		TweetText:       trimmedText,
 		IsReply:         mention.InReplyToUserID != nil,
-		RepublishAt:     time.Now().UTC().Add(h.Config.RepublishDelay),
+		RepublishAt:     time.Now().UTC().Add(republishDelay),
 	}
 
 	err = h.CapsuleStore.Create(&capsule)

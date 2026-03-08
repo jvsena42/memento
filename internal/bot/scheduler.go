@@ -56,8 +56,9 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
 				truncatedText := truncate(capsule.TweetText, availableChars)
 
-				text := fmt.Sprintf("🕰️ @%s saved this memory 5 years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
+				text := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
 					capsule.RequesterHandle,
+					capsule.YearsDelay,
 					truncatedText,
 					capsule.TweetID,
 				)
@@ -83,7 +84,7 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 			}
 
 			if response != nil { // Tweet exists
-				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ 5 years ago today... @%s", capsule.RequesterHandle), capsule.TweetID, "")
+				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ %d years ago today... @%s", capsule.YearsDelay, capsule.RequesterHandle), capsule.TweetID, "")
 				if err != nil {
 					slog.Error("error publishing tweet", "error", err)
 					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {

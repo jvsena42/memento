@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	defaultPollInterval  = 30 * time.Second
-	defaultRepublishDev  = 5 * time.Minute
-	defaultRepublishProd = 5 * 365 * 24 * time.Hour // ~5 years
+	defaultPollInterval   = 30 * time.Second
+	defaultRepublishDev   = 5 * time.Minute
+	defaultRepublishProd  = 5 * 365 * 24 * time.Hour // ~5 years
+	MinRepublishDelayYear = 1
+	MaxRepublishDelayYear = 5
 )
 
 type Config struct {
