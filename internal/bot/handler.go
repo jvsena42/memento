@@ -17,7 +17,6 @@ import (
 
 const (
 	lastMentionId = "last_mention_id"
-	maxBatches    = 20
 )
 
 type Handler struct {
@@ -143,7 +142,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 
 	defer ticker.Stop()
 	h.pollMentions(ctx)
-	for range maxBatches {
+	for {
 		select {
 		case <-ticker.C:
 			h.pollMentions(ctx)

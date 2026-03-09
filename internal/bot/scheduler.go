@@ -15,6 +15,7 @@ import (
 
 const MAX_TWEET_LENGTH = 280
 const URL_SHORTEN_LENGTH = 23
+const maxBatches = 20
 
 type Scheduler struct {
 	Client       *twitter.Client
@@ -113,7 +114,7 @@ func (s *Scheduler) StartScheduler(ctx context.Context) {
 
 	s.PublishDueCapsules(ctx)
 
-	for {
+	for range maxBatches {
 		select {
 		case <-ticker.C:
 			s.PublishDueCapsules(ctx)
