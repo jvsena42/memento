@@ -122,6 +122,9 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 			resetStr := header.Get("x-rate-limit-reset")
 			resetUnix, _ := strconv.ParseInt(resetStr, 10, 64)
 			waitTime := time.Until(time.Unix(resetUnix, 0)) + 1*time.Second
+			if waitTime < 1*time.Second {
+				waitTime = 1 * time.Second
+			}
 			slog.Warn("rate limited, waiting", "seconds", waitTime.Seconds())
 			time.Sleep(waitTime)
 			continue
