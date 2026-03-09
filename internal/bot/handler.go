@@ -34,13 +34,8 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 	var targetTweet *twitter.TweetResponse
 	var err error
 
-	if mention.ReferencedTweets != nil {
-		referencedTweet := findRepliedToTweet(mention.ReferencedTweets)
-		if referencedTweet == nil {
-			slog.Warn("referencedTweet not found", "referencedTweet", referencedTweet)
-			return nil
-		}
-
+	referencedTweet := findRepliedToTweet(mention.ReferencedTweets)
+	if referencedTweet != nil {
 		targetTweet, err = h.Client.GetTweet(ctx, referencedTweet.ID)
 	} else {
 		targetTweet, err = h.Client.GetTweet(ctx, mention.ID)
