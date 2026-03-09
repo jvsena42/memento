@@ -66,22 +66,22 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
-	saved, err := h.CapsuleStore.TweetAlreadySaved(targetTweet.Tweet.ID)
+	tweetAlreadySaved, err := h.CapsuleStore.TweetAlreadySaved(targetTweet.Tweet.ID)
 	if err != nil {
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
-	if saved {
+	if tweetAlreadySaved {
 		if _, err := h.Client.PostTweet(ctx, "This one's already saved! ⏳", "", mention.ID); err != nil {
 			slog.Warn("failed to reply 'already saved'", "error", err)
 		}
 		return nil
 	}
 
-	saved, err = h.CapsuleStore.UserSavedToday(mention.AuthorID)
+	userSavedToday, err := h.CapsuleStore.UserSavedToday(mention.AuthorID)
 	if err != nil {
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
-	if saved {
+	if userSavedToday {
 		if _, err := h.Client.PostTweet(ctx, "Come back tomorrow! 🕰️", "", mention.ID); err != nil {
 			slog.Warn("failed to reply 'come back tomorrow'", "error", err)
 		}
