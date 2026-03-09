@@ -17,7 +17,6 @@ func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 
 	var allTweets []Tweet
 	var allUsers []User
-	var allIncludedTweets []Tweet
 	maxPages := 10
 	var response TweetsResponse
 	for page := 0; page < maxPages; page++ {
@@ -33,7 +32,6 @@ func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 
 		if response.Includes != nil {
 			allUsers = append(allUsers, response.Includes.Users...)
-			allIncludedTweets = append(allIncludedTweets, response.Includes.Tweets...)
 		}
 
 		if page == 0 && response.Meta != nil && response.Meta.NewestID != "" {
@@ -50,7 +48,7 @@ func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 	response.Tweets = allTweets
 	response.Includes = &Includes{
 		Users:  allUsers,
-		Tweets: allIncludedTweets,
+		Tweets: response.Includes.Tweets,
 	}
 
 	return &response, nil
