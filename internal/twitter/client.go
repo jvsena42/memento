@@ -32,9 +32,10 @@ func NewClient(cfg *config.Config) *Client {
 		ConsumerSecret: cfg.TwitterAPISecret,
 	}
 	token := oauth1.NewToken(cfg.TwitterAccessToken, cfg.TwitterAccessSecret)
-
+	configClient := config.Client(context.Background(), token)
+	configClient.Timeout = 30 * time.Second
 	return &Client{
-		Authenticated: config.Client(context.Background(), token),
+		Authenticated: configClient,
 		BaseUrl:       "https://api.twitter.com",
 		BotUserID:     cfg.BotUserID,
 		SinceID:       "",
