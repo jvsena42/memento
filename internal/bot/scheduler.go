@@ -13,9 +13,11 @@ import (
 	"github.com/jvsena42/memento/internal/twitter"
 )
 
-const MAX_TWEET_LENGTH = 280
-const URL_SHORTEN_LENGTH = 23
-const maxBatches = 20
+const (
+	maxTweetLength   = 280
+	urlShorterLength = 23
+	maxBatches       = 20
+)
 
 type Scheduler struct {
 	Client       *twitter.Client
@@ -51,9 +53,9 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 			if errors.Is(err, twitter.ErrNotFound) {
 
 				prefix := fmt.Sprintf("🕰️ @%s saved this memory %d year(s) ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
-				prefixLength := utf8.RuneCountInString(prefix) + URL_SHORTEN_LENGTH
+				prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
 
-				availableChars := MAX_TWEET_LENGTH - prefixLength
+				availableChars := maxTweetLength - prefixLength
 
 				truncatedText := truncate(capsule.TweetText, availableChars)
 
