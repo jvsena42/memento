@@ -92,7 +92,13 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 	maxRetries := 3
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
+
+		var bodyReader io.Reader = http.NoBody
+		if body != nil {
+			bodyReader = bytes.NewReader(body)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 
 		if err != nil {
 			slog.Warn("request creation failed", "error", err)
