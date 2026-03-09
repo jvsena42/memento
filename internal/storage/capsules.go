@@ -126,9 +126,9 @@ func (s *CapsuleStore) UpdateStatus(id int64, status string) error {
 func (s *CapsuleStore) GetByID(id int64) (*Capsule, error) {
 	var c Capsule
 	err := s.db.Conn.QueryRow(`
-		SELECT id, requester_id, requester_handle, tweet_id, tweet_author, tweet_text, is_reply, created_at, republish_at, status, published_at
+		SELECT id, requester_id, requester_handle, tweet_id, tweet_author, tweet_text, is_reply, created_at, republish_at, years_delay, status, published_at
 		FROM capsules WHERE id = ?
-	`, id).Scan(&c.ID, &c.RequesterID, &c.RequesterHandle, &c.TweetID, &c.TweetAuthor, &c.TweetText, &c.IsReply, &c.CreatedAt, &c.RepublishAt, &c.Status, &c.PublishedAt)
+	`, id).Scan(&c.ID, &c.RequesterID, &c.RequesterHandle, &c.TweetID, &c.TweetAuthor, &c.TweetText, &c.IsReply, &c.CreatedAt, &c.RepublishAt, &c.YearsDelay, &c.Status, &c.PublishedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
