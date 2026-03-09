@@ -104,6 +104,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		TweetText:       trimmedText,
 		IsReply:         mention.InReplyToUserID != nil,
 		RepublishAt:     time.Now().UTC().Add(republishDelay),
+		YearsDelay:      int64(years),
 	}
 
 	err = h.CapsuleStore.Create(&capsule)
