@@ -15,7 +15,10 @@ import (
 	"modernc.org/sqlite"
 )
 
-const LAST_MENTION_ID = "last_mention_id"
+const (
+	lastMentionId = "last_mention_id"
+	maxBatches    = 20
+)
 
 type Handler struct {
 	Client       *twitter.Client
@@ -129,7 +132,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 }
 
 func (h *Handler) StartPoller(ctx context.Context) {
-	sinceID, err := h.CapsuleStore.GetValue(LAST_MENTION_ID)
+	sinceID, err := h.CapsuleStore.GetValue(lastMentionId)
 	if err != nil {
 		slog.Warn("failed to load last mention id", "error", err)
 	} else {
@@ -140,7 +143,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 
 	defer ticker.Stop()
 	h.pollMentions(ctx)
-	for {
+	for range maxBatches {
 		select {
 		case <-ticker.C:
 			h.pollMentions(ctx)
@@ -160,7 +163,7 @@ func (h *Handler) pollMentions(ctx context.Context) {
 	}
 
 	if h.Client.SinceID != "" {
-		if err := h.CapsuleStore.SetValue(LAST_MENTION_ID, h.Client.SinceID); err != nil {
+		if err := h.CapsuleStore.SetValue(lastMentionId, h.Client.SinceID); err != nil {
 			slog.Error("failed to save last mention id", "error", err)
 		}
 	}
