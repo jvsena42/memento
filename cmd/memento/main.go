@@ -50,9 +50,10 @@ func main() {
 
 	capsuleStore := storage.NewCapsuleStore(db)
 
-	twitterClient := twitter.NewClient(cfg)
-
 	ctx, cancel := context.WithCancel(context.Background())
+
+	twitterClient := twitter.NewClient(ctx, cfg)
+
 	var wg sync.WaitGroup
 
 	botHandler := bot.Handler{

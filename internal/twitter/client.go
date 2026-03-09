@@ -25,14 +25,14 @@ type Client struct {
 	SinceID       string
 }
 
-func NewClient(cfg *config.Config) *Client {
+func NewClient(ctx context.Context, cfg *config.Config) *Client {
 
 	config := oauth1.Config{
 		ConsumerKey:    cfg.TwitterAPIKey,
 		ConsumerSecret: cfg.TwitterAPISecret,
 	}
 	token := oauth1.NewToken(cfg.TwitterAccessToken, cfg.TwitterAccessSecret)
-	configClient := config.Client(context.Background(), token)
+	configClient := config.Client(ctx, token)
 	configClient.Timeout = 30 * time.Second
 	return &Client{
 		Authenticated: configClient,
