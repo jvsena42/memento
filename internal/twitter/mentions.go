@@ -8,7 +8,7 @@ import (
 
 func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 	params := map[string]string{
-		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id",
+		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id,referenced_tweets",
 		"expansions":   "author_id",
 	}
 	if c.SinceID != "" {

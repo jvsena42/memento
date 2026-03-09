@@ -17,7 +17,7 @@ type ReplyConfig struct {
 
 func (c *Client) GetTweet(ctx context.Context, id string) (*TweetResponse, error) {
 	params := map[string]string{
-		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id",
+		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id,referenced_tweets",
 		"expansions":   "author_id",
 	}
 	respBytes, err := c.doGet(ctx, "/2/tweets/"+id, params)

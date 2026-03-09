@@ -1,12 +1,13 @@
 package twitter
 
 type Tweet struct {
-	ID              string  `json:"id"`
-	AuthorID        string  `json:"author_id"`
-	Text            string  `json:"text"`
-	CreatedAt       string  `json:"created_at"`
-	ConversationID  string  `json:"conversation_id"`
-	InReplyToUserID *string `json:"in_reply_to_user_id"`
+	ID               string            `json:"id"`
+	AuthorID         string            `json:"author_id"`
+	Text             string            `json:"text"`
+	CreatedAt        string            `json:"created_at"`
+	ConversationID   string            `json:"conversation_id"`
+	InReplyToUserID  *string           `json:"in_reply_to_user_id"`
+	ReferencedTweets []ReferencedTweet `json:"referenced_tweets"`
 }
 
 type User struct {
@@ -46,4 +47,9 @@ type TweetsResponse struct {
 	Includes *Includes  `json:"includes"`
 	Meta     *Meta      `json:"meta"`
 	Errors   []APIError `json:"errors"`
+}
+
+type ReferencedTweet struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
 }

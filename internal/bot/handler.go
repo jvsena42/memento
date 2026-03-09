@@ -32,8 +32,14 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 	var targetTweet *twitter.TweetResponse
 	var err error
 
-	if mention.InReplyToUserID != nil {
-		targetTweet, err = h.Client.GetTweet(ctx, mention.ConversationID)
+	if mention.ReferencedTweets != nil {
+		referencedTweet := findRepliedToTweet(mention.ReferencedTweets)
+		if referencedTweet == nil {
+			slog.Warn("referencedTweet not found", "referencedTweet", referencedTweet)
+			return nil
+		}
+
+		targetTweet, err = h.Client.GetTweet(ctx, referencedTweet.ID)
 	} else {
 		targetTweet, err = h.Client.GetTweet(ctx, mention.ID)
 	}
@@ -185,6 +191,15 @@ func findUser(users []twitter.User, userID string) string {
 		}
 	}
 	return ""
+}
+
+func findRepliedToTweet(referencedTweets []twitter.ReferencedTweet) *twitter.ReferencedTweet {
+	for _, tweet := range referencedTweets {
+		if tweet.Type == "replied_to" {
+			return &tweet
+		}
+	}
+	return nil
 }
 
 // parseYear extracts the first number separated by spaces from the text and returns it as int.
