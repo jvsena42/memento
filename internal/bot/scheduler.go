@@ -40,7 +40,7 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 		}
 
 		for _, capsule := range capsules {
-			time.Sleep(2 * time.Second)
+			sleepWithContext(ctx, 2*time.Second)
 
 			response, err := s.Client.GetTweet(ctx, capsule.TweetID)
 
@@ -157,4 +157,13 @@ func truncate(s string, max int) string {
 	}
 
 	return s
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	select {
+	case <-time.After(d):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
