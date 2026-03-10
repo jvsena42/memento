@@ -47,8 +47,7 @@ func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 
 	response.Tweets = allTweets
 	response.Includes = &Includes{
-		Users:  allUsers,
-		Tweets: response.Includes.Tweets,
+		Users: allUsers,
 	}
 
 	return &response, nil
