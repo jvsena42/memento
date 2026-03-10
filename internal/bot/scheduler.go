@@ -40,6 +40,8 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 		}
 
 		for _, capsule := range capsules {
+			time.Sleep(2 * time.Second)
+
 			response, err := s.Client.GetTweet(ctx, capsule.TweetID)
 
 			if errors.Is(err, twitter.ErrForbidden) {
@@ -99,8 +101,6 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 					}
 				}
 			}
-
-			time.Sleep(2 * time.Second)
 		}
 
 		if batch == maxBatches-1 {
