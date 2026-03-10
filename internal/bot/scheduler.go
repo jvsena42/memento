@@ -52,7 +52,7 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
 			if errors.Is(err, twitter.ErrNotFound) {
 
-				prefix := fmt.Sprintf("🕰️ @%s saved this memory %d year(s) ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
+				prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
 				prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
 
 				availableChars := maxTweetLength - prefixLength
