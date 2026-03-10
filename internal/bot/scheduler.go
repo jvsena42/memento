@@ -27,7 +27,7 @@ type Scheduler struct {
 
 func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
-	for {
+	for batch := range maxBatches {
 		capsules, err := s.CapsuleStore.GetDueCapsules()
 
 		if err != nil {
@@ -102,6 +102,10 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
 			time.Sleep(2 * time.Second)
 		}
+
+		if batch == maxBatches-1 {
+			slog.Warn("batch limit reached, will resume on next scheduler tick")
+		}
 	}
 }
 
@@ -116,7 +120,7 @@ func (s *Scheduler) StartScheduler(ctx context.Context) {
 
 	s.PublishDueCapsules(ctx)
 
-	for range maxBatches {
+	for {
 		select {
 		case <-ticker.C:
 			s.PublishDueCapsules(ctx)
