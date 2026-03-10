@@ -103,7 +103,9 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 
 		if err != nil {
 			slog.Warn("request creation failed", "error", err)
-			time.Sleep(time.Duration(math.Pow(2, float64(attempt))) * time.Second)
+			if err := sleepWithContext(ctx, time.Duration(math.Pow(2, float64(attempt)))*time.Second); err != nil {
+				return nil, err
+			}
 			continue
 		}
 
@@ -114,7 +116,9 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 
 		//Network error
 		if err != nil {
-			time.Sleep(time.Duration(math.Pow(2, float64(attempt))) * time.Second)
+			if err := sleepWithContext(ctx, time.Duration(math.Pow(2, float64(attempt)))*time.Second); err != nil {
+				return nil, err
+			}
 			continue
 		}
 
@@ -127,13 +131,17 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 				waitTime = 1 * time.Second
 			}
 			slog.Warn("rate limited, waiting", "seconds", waitTime.Seconds())
-			time.Sleep(waitTime)
+			if err := sleepWithContext(ctx, waitTime); err != nil {
+				return nil, err
+			}
 			continue
 		}
 
 		// Server error -> wait and retry
 		if statusCode >= 500 {
-			time.Sleep(time.Duration(math.Pow(2, float64(attempt))) * time.Second)
+			if err := sleepWithContext(ctx, time.Duration(math.Pow(2, float64(attempt)))*time.Second); err != nil {
+				return nil, err
+			}
 			continue
 		}
 
@@ -155,4 +163,13 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 	}
 
 	return nil, fmt.Errorf("max retries exceeded")
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	select {
+	case <-time.After(d):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
