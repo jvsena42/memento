@@ -150,7 +150,7 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 		}
 
 		if statusCode == 403 {
-			return nil, ErrForbidden
+			return nil, fmt.Errorf("forbidden (403): %s", string(respBody))
 		}
 
 		// Other client errors (400, 401, etc.) → don't retry
