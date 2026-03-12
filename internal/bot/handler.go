@@ -25,7 +25,7 @@ type Handler struct {
 	Config       *config.Config
 }
 
-func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, users []twitter.User) error {
+func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, users []twitter.User, includedTweets []twitter.Tweet) error {
 
 	if mention.AuthorID == h.Client.BotUserID {
 		return nil
@@ -43,9 +43,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return fmt.Errorf("failed to check tweet: %w", err)
 	}
 	if tweetAlreadySaved {
-		if _, err := h.Client.PostTweet(ctx, "This one's already saved! ⏳", "", mention.ID); err != nil {
-			slog.Warn("failed to reply 'already saved'", "error", err)
-		}
+		slog.Debug("tweet already saved, skipping reply", "tweet_id", targetID)
 		return nil
 	}
 
@@ -57,16 +55,28 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 	requesterHandler := findUser(users, mention.AuthorID)
 
 	if userSavedToday {
-		if _, err := h.Client.PostTweet(ctx, fmt.Sprintf("Come back tomorrow, @%s! 🕰️", requesterHandler), "", mention.ID); err != nil {
-			slog.Warn("failed to reply 'come back tomorrow'", "error", err)
-		}
+		slog.Debug("user already saved today, skipping reply", "user_id", mention.AuthorID)
 		return nil
 	}
 
-	var targetTweet *twitter.TweetResponse
+	// Try to find the target tweet in the included tweets from GetMentions expansion
+	var target twitter.Tweet
+	var found bool
+	if targetID == mention.ID {
+		// The mention itself is the target
+		target = mention
+		found = true
+	} else {
+		target, found = findTweet(includedTweets, targetID)
+	}
 
-	targetTweet, err = h.Client.GetTweet(ctx, targetID)
+	if found {
+		tweetAuthor := findUser(users, target.AuthorID)
+		return h.saveCapsule(ctx, mention, target, tweetAuthor, requesterHandler)
+	}
 
+	// Fallback: fetch individually if not in includes (e.g., across pagination boundaries)
+	targetTweet, err := h.Client.GetTweet(ctx, targetID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch target tweet: %w", err)
 	}
@@ -76,9 +86,13 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		tweetUsers = targetTweet.Includes.Users
 	}
 	tweetAuthor := findUser(tweetUsers, targetTweet.Tweet.AuthorID)
+	return h.saveCapsule(ctx, mention, targetTweet.Tweet, tweetAuthor, requesterHandler)
+}
+
+func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target twitter.Tweet, tweetAuthor string, requesterHandler string) error {
 
 	if tweetAuthor == "" {
-		slog.Warn("tweetAuthor not found", "mentionID", mention.ID, "authorID", targetTweet.Tweet.AuthorID)
+		slog.Warn("tweetAuthor not found", "mentionID", mention.ID, "authorID", target.AuthorID)
 		return nil
 	}
 
@@ -87,9 +101,9 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
-	trimmedText := strings.TrimSpace(targetTweet.Tweet.Text)
+	trimmedText := strings.TrimSpace(target.Text)
 	if trimmedText == "" {
-		slog.Warn("tweet text is empty, skipping", "tweet_id", targetTweet.Tweet.ID)
+		slog.Warn("tweet text is empty, skipping", "tweet_id", target.ID)
 		return nil
 	}
 
@@ -98,7 +112,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 	capsule := storage.Capsule{
 		RequesterID:     mention.AuthorID,
 		RequesterHandle: requesterHandler,
-		TweetID:         targetTweet.Tweet.ID,
+		TweetID:         target.ID,
 		TweetAuthor:     tweetAuthor,
 		TweetText:       trimmedText,
 		IsReply:         mention.InReplyToUserID != nil,
@@ -106,7 +120,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		YearsDelay:      int64(years),
 	}
 
-	err = h.CapsuleStore.Create(&capsule)
+	err := h.CapsuleStore.Create(&capsule)
 
 	if err != nil {
 		var sqliteErr *sqlite.Error
@@ -173,12 +187,14 @@ func (h *Handler) pollMentions(ctx context.Context) {
 	}
 
 	var users []twitter.User
+	var includedTweets []twitter.Tweet
 	if tweetsResponse.Includes != nil {
 		users = tweetsResponse.Includes.Users
+		includedTweets = tweetsResponse.Includes.Tweets
 	}
 
 	for _, tweet := range tweetsResponse.Tweets {
-		if err := h.ProcessMention(ctx, tweet, users); err != nil {
+		if err := h.ProcessMention(ctx, tweet, users, includedTweets); err != nil {
 			slog.Error("error processing mention", "tweet_id", tweet.ID, "error", err)
 		}
 	}
@@ -191,6 +207,15 @@ func findUser(users []twitter.User, userID string) string {
 		}
 	}
 	return ""
+}
+
+func findTweet(tweets []twitter.Tweet, id string) (twitter.Tweet, bool) {
+	for _, t := range tweets {
+		if t.ID == id {
+			return t, true
+		}
+	}
+	return twitter.Tweet{}, false
 }
 
 func findRepliedToTweet(referencedTweets []twitter.ReferencedTweet) *twitter.ReferencedTweet {

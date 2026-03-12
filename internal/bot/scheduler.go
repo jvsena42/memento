@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -39,56 +38,23 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 			break
 		}
 
+		// Batch-fetch all tweet IDs in a single API call
+		ids := make([]string, len(capsules))
+		for i, c := range capsules {
+			ids[i] = c.TweetID
+		}
+
+		existingTweets, _, err := s.Client.GetTweets(ctx, ids)
+		if err != nil {
+			slog.Error("error batch-fetching tweets", "error", err)
+			return
+		}
+
 		for _, capsule := range capsules {
 			sleepWithContext(ctx, 2*time.Second)
 
-			response, err := s.Client.GetTweet(ctx, capsule.TweetID)
-
-			if errors.Is(err, twitter.ErrForbidden) {
-				slog.Error("error publishing capsule", "error", err)
-				if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
-					slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
-				}
-				continue
-			}
-
-			if errors.Is(err, twitter.ErrNotFound) {
-
-				prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
-				prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
-
-				availableChars := maxTweetLength - prefixLength
-
-				truncatedText := truncate(capsule.TweetText, availableChars)
-
-				text := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
-					capsule.RequesterHandle,
-					capsule.YearsDelay,
-					truncatedText,
-					capsule.TweetID,
-				)
-
-				_, postErr := s.Client.PostTweet(ctx, text, "", "")
-				if postErr != nil {
-					slog.Error("error posting deleted capsule", "error", postErr)
-					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
-						slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
-					}
-				} else {
-					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
-						slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
-					}
-				}
-
-				continue
-			}
-
-			if err != nil {
-				slog.Error("error fetching tweet", "error", err)
-				continue
-			}
-
-			if response != nil { // Tweet exists
+			if _, exists := existingTweets[capsule.TweetID]; exists {
+				// Tweet still exists — post quote tweet
 				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ %d years ago today... @%s", capsule.YearsDelay, capsule.RequesterHandle), capsule.TweetID, "")
 				if err != nil {
 					slog.Error("error publishing tweet", "error", err)
@@ -100,11 +66,42 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 						slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
 					}
 				}
+			} else {
+				// Tweet deleted or inaccessible — post snapshot
+				s.publishDeletedCapsule(ctx, capsule)
 			}
 		}
 
 		if batch == maxBatches-1 {
 			slog.Warn("batch limit reached, will resume on next scheduler tick")
+		}
+	}
+}
+
+func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.Capsule) {
+	prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
+	prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
+
+	availableChars := maxTweetLength - prefixLength
+
+	truncatedText := truncate(capsule.TweetText, availableChars)
+
+	text := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
+		capsule.RequesterHandle,
+		capsule.YearsDelay,
+		truncatedText,
+		capsule.TweetID,
+	)
+
+	_, postErr := s.Client.PostTweet(ctx, text, "", "")
+	if postErr != nil {
+		slog.Error("error posting deleted capsule", "error", postErr)
+		if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
+			slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+		}
+	} else {
+		if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
+			slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
 		}
 	}
 }
