@@ -31,15 +31,41 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
-	var targetTweet *twitter.TweetResponse
-	var err error
-
 	referencedTweet := findRepliedToTweet(mention.ReferencedTweets)
+
+	targetID := mention.ID
 	if referencedTweet != nil {
-		targetTweet, err = h.Client.GetTweet(ctx, referencedTweet.ID)
-	} else {
-		targetTweet, err = h.Client.GetTweet(ctx, mention.ID)
+		targetID = referencedTweet.ID
 	}
+
+	tweetAlreadySaved, err := h.CapsuleStore.TweetAlreadySaved(targetID)
+	if err != nil {
+		return fmt.Errorf("failed to check tweet: %w", err)
+	}
+	if tweetAlreadySaved {
+		if _, err := h.Client.PostTweet(ctx, "This one's already saved! ⏳", "", mention.ID); err != nil {
+			slog.Warn("failed to reply 'already saved'", "error", err)
+		}
+		return nil
+	}
+
+	userSavedToday, err := h.CapsuleStore.UserSavedToday(mention.AuthorID)
+	if err != nil {
+		return fmt.Errorf("failed to check tweet: %w", err)
+	}
+
+	requesterHandler := findUser(users, mention.AuthorID)
+
+	if userSavedToday {
+		if _, err := h.Client.PostTweet(ctx, fmt.Sprintf("Come back tomorrow, @%s! 🕰️", requesterHandler), "", mention.ID); err != nil {
+			slog.Warn("failed to reply 'come back tomorrow'", "error", err)
+		}
+		return nil
+	}
+
+	var targetTweet *twitter.TweetResponse
+
+	targetTweet, err = h.Client.GetTweet(ctx, targetID)
 
 	if err != nil {
 		return fmt.Errorf("failed to fetch target tweet: %w", err)
@@ -56,32 +82,8 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
-	requesterHandler := findUser(users, mention.AuthorID)
-
 	if requesterHandler == "" {
 		slog.Warn("requesterHandler not found", "mentionID", mention.ID, "authorID", mention.AuthorID)
-		return nil
-	}
-
-	tweetAlreadySaved, err := h.CapsuleStore.TweetAlreadySaved(targetTweet.Tweet.ID)
-	if err != nil {
-		return fmt.Errorf("failed to check tweet: %w", err)
-	}
-	if tweetAlreadySaved {
-		if _, err := h.Client.PostTweet(ctx, "This one's already saved! ⏳", "", mention.ID); err != nil {
-			slog.Warn("failed to reply 'already saved'", "error", err)
-		}
-		return nil
-	}
-
-	userSavedToday, err := h.CapsuleStore.UserSavedToday(mention.AuthorID)
-	if err != nil {
-		return fmt.Errorf("failed to check tweet: %w", err)
-	}
-	if userSavedToday {
-		if _, err := h.Client.PostTweet(ctx, "Come back tomorrow! 🕰️", "", mention.ID); err != nil {
-			slog.Warn("failed to reply 'come back tomorrow'", "error", err)
-		}
 		return nil
 	}
 
