@@ -172,8 +172,10 @@ func (c *Client) GetSinceID() string   { return c.SinceID }
 func (c *Client) SetSinceID(id string) { c.SinceID = id }
 
 func sleepWithContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
 	select {
-	case <-time.After(d):
+	case <-timer.C:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

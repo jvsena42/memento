@@ -28,6 +28,12 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 	publishedPerUser := make(map[string]int)
 
 	for batch := range maxBatches {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		capsules, err := s.CapsuleStore.GetDueCapsules()
 
 		if err != nil {
@@ -57,7 +63,9 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 				continue
 			}
 
-			sleepWithContext(ctx, 2*time.Second)
+			if err := sleepWithContext(ctx, 2*time.Second); err != nil {
+				return
+			}
 
 			if _, exists := existingTweets[capsule.TweetID]; exists {
 				// Tweet still exists — post quote tweet
@@ -75,8 +83,11 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 				}
 			} else {
 				// Tweet deleted or inaccessible — post snapshot
-				s.publishDeletedCapsule(ctx, capsule)
-				publishedPerUser[capsule.RequesterID]++
+				if err := s.publishDeletedCapsule(ctx, capsule); err != nil {
+					slog.Error("error publishing deleted capsule", "error", err)
+				} else {
+					publishedPerUser[capsule.RequesterID]++
+				}
 			}
 		}
 
@@ -86,7 +97,7 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 	}
 }
 
-func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.Capsule) {
+func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.Capsule) error {
 	prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
 	prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
 
@@ -103,15 +114,16 @@ func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.C
 
 	_, postErr := s.Client.PostTweet(ctx, text, "", "")
 	if postErr != nil {
-		slog.Error("error posting deleted capsule", "error", postErr)
 		if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
 			slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
 		}
-	} else {
-		if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
-			slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
-		}
+		return postErr
 	}
+
+	if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
+		slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+	}
+	return nil
 }
 
 func (s *Scheduler) StartScheduler(ctx context.Context) {
@@ -165,8 +177,10 @@ func truncate(s string, max int) string {
 }
 
 func sleepWithContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
 	select {
-	case <-time.After(d):
+	case <-timer.C:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
