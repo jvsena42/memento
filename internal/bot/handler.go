@@ -135,7 +135,7 @@ func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target
 		YearsDelay:      int64(years),
 	}
 
-	err := h.CapsuleStore.Create(&capsule)
+	err = h.CapsuleStore.Create(&capsule)
 
 	if err != nil {
 		var sqliteErr *sqlite.Error
