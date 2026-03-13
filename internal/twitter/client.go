@@ -19,10 +19,11 @@ import (
 )
 
 type Client struct {
-	Authenticated *http.Client
-	BotUserID     string
-	BaseUrl       string
-	SinceID       string
+	Authenticated   *http.Client
+	BotUserID       string
+	BaseUrl         string
+	SinceID         string
+	MaxMentionPages int
 }
 
 func NewClient(ctx context.Context, cfg *config.Config) *Client {
@@ -35,10 +36,11 @@ func NewClient(ctx context.Context, cfg *config.Config) *Client {
 	configClient := config.Client(ctx, token)
 	configClient.Timeout = 30 * time.Second
 	return &Client{
-		Authenticated: configClient,
-		BaseUrl:       "https://api.twitter.com",
-		BotUserID:     cfg.BotUserID,
-		SinceID:       "",
+		Authenticated:   configClient,
+		BaseUrl:         "https://api.twitter.com",
+		BotUserID:       cfg.BotUserID,
+		SinceID:         "",
+		MaxMentionPages: cfg.MaxMentionPages,
 	}
 }
 

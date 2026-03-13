@@ -23,11 +23,17 @@ type Handler struct {
 	Client       *twitter.Client
 	CapsuleStore *storage.CapsuleStore
 	Config       *config.Config
+	Limiter      *MentionLimiter
 }
 
 func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, users []twitter.User, includedTweets []twitter.Tweet) error {
 
 	if mention.AuthorID == h.Client.BotUserID {
+		return nil
+	}
+
+	if h.Limiter != nil && !h.Limiter.Allow(mention.AuthorID) {
+		slog.Debug("mention rate limited", "user_id", mention.AuthorID)
 		return nil
 	}
 
@@ -47,15 +53,15 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 		return nil
 	}
 
-	userSavedToday, err := h.CapsuleStore.UserSavedToday(mention.AuthorID)
+	userCount, err := h.CapsuleStore.UserCapsulesToday(mention.AuthorID)
 	if err != nil {
-		return fmt.Errorf("failed to check tweet: %w", err)
+		return fmt.Errorf("failed to check user daily limit: %w", err)
 	}
 
 	requesterHandler := findUser(users, mention.AuthorID)
 
-	if userSavedToday {
-		slog.Debug("user already saved today, skipping reply", "user_id", mention.AuthorID)
+	if userCount >= h.Config.MaxCapsulesPerUserDay {
+		slog.Debug("user daily limit reached, skipping", "user_id", mention.AuthorID, "count", userCount)
 		return nil
 	}
 
@@ -90,6 +96,15 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 }
 
 func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target twitter.Tweet, tweetAuthor string, requesterHandler string) error {
+
+	globalCount, err := h.CapsuleStore.CapsulesToday()
+	if err != nil {
+		return fmt.Errorf("failed to check daily cap: %w", err)
+	}
+	if globalCount >= h.Config.MaxCapsulesPerDay {
+		slog.Warn("global daily capsule limit reached", "count", globalCount)
+		return nil
+	}
 
 	if tweetAuthor == "" {
 		slog.Warn("tweetAuthor not found", "mentionID", mention.ID, "authorID", target.AuthorID)

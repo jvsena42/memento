@@ -18,7 +18,10 @@ func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 	var allTweets []Tweet
 	var allUsers []User
 	var allIncludedTweets []Tweet
-	maxPages := 10
+	maxPages := c.MaxMentionPages
+	if maxPages <= 0 {
+		maxPages = 3
+	}
 	var response TweetsResponse
 	for page := 0; page < maxPages; page++ {
 		respBytes, err := c.doGet(ctx, fmt.Sprintf("/2/users/%s/mentions", c.BotUserID), params)

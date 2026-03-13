@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	maxTweetLength   = 280
-	urlShorterLength = 23
-	maxBatches       = 20
+	maxTweetLength           = 280
+	urlShorterLength         = 23
+	maxBatches               = 20
+	maxPublishPerUserPerTick = 3
 )
 
 type Scheduler struct {
@@ -25,6 +26,7 @@ type Scheduler struct {
 }
 
 func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
+	publishedPerUser := make(map[string]int)
 
 	for batch := range maxBatches {
 		capsules, err := s.CapsuleStore.GetDueCapsules()
@@ -51,6 +53,11 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 		}
 
 		for _, capsule := range capsules {
+			if publishedPerUser[capsule.RequesterID] >= maxPublishPerUserPerTick {
+				slog.Debug("per-user publish limit reached, deferring", "user_id", capsule.RequesterID)
+				continue
+			}
+
 			sleepWithContext(ctx, 2*time.Second)
 
 			if _, exists := existingTweets[capsule.TweetID]; exists {
@@ -65,10 +72,12 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
 						slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
 					}
+					publishedPerUser[capsule.RequesterID]++
 				}
 			} else {
 				// Tweet deleted or inaccessible — post snapshot
 				s.publishDeletedCapsule(ctx, capsule)
+				publishedPerUser[capsule.RequesterID]++
 			}
 		}
 

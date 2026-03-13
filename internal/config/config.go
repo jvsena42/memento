@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -12,8 +13,11 @@ const (
 	defaultPollInterval   = 30 * time.Second
 	defaultRepublishDev   = 5 * time.Minute
 	defaultRepublishProd  = 5 * 365 * 24 * time.Hour // ~5 years
-	MinRepublishDelayYear = 1
-	MaxRepublishDelayYear = 5
+	MinRepublishDelayYear        = 1
+	MaxRepublishDelayYear        = 5
+	defaultMaxCapsulesPerDay     = 100
+	defaultMaxCapsulesPerUserDay = 5
+	defaultMaxMentionPages       = 3
 )
 
 type Config struct {
@@ -24,9 +28,12 @@ type Config struct {
 	BotHandle           string
 	DatabasePath        string
 	BotUserID           string
-	DevMode             bool
-	PollInterval        time.Duration
-	RepublishDelay      time.Duration
+	DevMode                bool
+	PollInterval           time.Duration
+	RepublishDelay         time.Duration
+	MaxCapsulesPerDay      int
+	MaxCapsulesPerUserDay  int
+	MaxMentionPages        int
 }
 
 func Load() (*Config, error) {
@@ -79,6 +86,10 @@ func Load() (*Config, error) {
 		cfg.RepublishDelay = defaultRepublishProd
 	}
 
+	cfg.MaxCapsulesPerDay = loadIntEnv("MAX_CAPSULES_PER_DAY", defaultMaxCapsulesPerDay)
+	cfg.MaxCapsulesPerUserDay = loadIntEnv("MAX_CAPSULES_PER_USER_PER_DAY", defaultMaxCapsulesPerUserDay)
+	cfg.MaxMentionPages = loadIntEnv("MAX_MENTION_PAGES", defaultMaxMentionPages)
+
 	if err := cfg.validate(); err != nil {
 		return nil, err
 	}
@@ -102,4 +113,16 @@ func (c *Config) validate() error {
 	}
 
 	return nil
+}
+
+func loadIntEnv(key string, defaultVal int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return defaultVal
+	}
+	return n
 }

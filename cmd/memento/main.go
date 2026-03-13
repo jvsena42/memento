@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/jvsena42/memento/internal/bot"
 	"github.com/jvsena42/memento/internal/config"
@@ -32,6 +33,9 @@ func main() {
 		"poll_interval", cfg.PollInterval,
 		"republish_delay", cfg.RepublishDelay,
 		"database", cfg.DatabasePath,
+		"max_capsules_per_day", cfg.MaxCapsulesPerDay,
+		"max_capsules_per_user_day", cfg.MaxCapsulesPerUserDay,
+		"max_mention_pages", cfg.MaxMentionPages,
 	)
 
 	// Initialize DB
@@ -56,10 +60,13 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	limiter := bot.NewMentionLimiter(cfg.MaxCapsulesPerUserDay, 24*time.Hour)
+
 	botHandler := bot.Handler{
 		Client:       twitterClient,
 		CapsuleStore: capsuleStore,
 		Config:       cfg,
+		Limiter:      limiter,
 	}
 
 	// Launch goroutines with wg tracking:

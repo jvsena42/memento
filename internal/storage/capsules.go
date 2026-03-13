@@ -60,7 +60,7 @@ func (s *CapsuleStore) TweetAlreadySaved(TweetID string) (bool, error) {
 	return count > 0, nil
 }
 
-func (s *CapsuleStore) UserSavedToday(requesterID string) (bool, error) {
+func (s *CapsuleStore) UserCapsulesToday(requesterID string) (int, error) {
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	tomorrow := today.Add(24 * time.Hour)
 
@@ -70,9 +70,24 @@ func (s *CapsuleStore) UserSavedToday(requesterID string) (bool, error) {
 		WHERE requester_id = ? AND created_at >= ? AND created_at < ?
 	`, requesterID, today, tomorrow).Scan(&count)
 	if err != nil {
-		return false, fmt.Errorf("checking daily rate limit: %w", err)
+		return 0, fmt.Errorf("checking daily rate limit: %w", err)
 	}
-	return count > 0, nil
+	return count, nil
+}
+
+func (s *CapsuleStore) CapsulesToday() (int, error) {
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	tomorrow := today.Add(24 * time.Hour)
+
+	var count int
+	err := s.db.Conn.QueryRow(`
+		SELECT COUNT(*) FROM capsules
+		WHERE created_at >= ? AND created_at < ?
+	`, today, tomorrow).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("checking global daily limit: %w", err)
+	}
+	return count, nil
 }
 
 // GetDueCapsules returns all pending capsules that are due for republishing
