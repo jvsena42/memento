@@ -20,15 +20,15 @@ const (
 )
 
 type Handler struct {
-	Client       *twitter.Client
-	CapsuleStore *storage.CapsuleStore
+	Client       TwitterClient
+	CapsuleStore CapsuleStorage
 	Config       *config.Config
 	Limiter      *MentionLimiter
 }
 
 func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, users []twitter.User, includedTweets []twitter.Tweet) error {
 
-	if mention.AuthorID == h.Client.BotUserID {
+	if mention.AuthorID == h.Client.GetBotUserID() {
 		return nil
 	}
 
@@ -161,7 +161,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 	if err != nil {
 		slog.Warn("failed to load last mention id", "error", err)
 	} else {
-		h.Client.SinceID = sinceID
+		h.Client.SetSinceID(sinceID)
 	}
 
 	ticker := time.NewTicker(h.Config.PollInterval)
@@ -187,8 +187,8 @@ func (h *Handler) pollMentions(ctx context.Context) {
 		return
 	}
 
-	if h.Client.SinceID != "" {
-		if err := h.CapsuleStore.SetValue(lastMentionId, h.Client.SinceID); err != nil {
+	if h.Client.GetSinceID() != "" {
+		if err := h.CapsuleStore.SetValue(lastMentionId, h.Client.GetSinceID()); err != nil {
 			slog.Error("failed to save last mention id", "error", err)
 		}
 	}

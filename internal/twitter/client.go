@@ -167,6 +167,10 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 	return nil, fmt.Errorf("max retries exceeded")
 }
 
+func (c *Client) GetBotUserID() string { return c.BotUserID }
+func (c *Client) GetSinceID() string   { return c.SinceID }
+func (c *Client) SetSinceID(id string) { c.SinceID = id }
+
 func sleepWithContext(ctx context.Context, d time.Duration) error {
 	select {
 	case <-time.After(d):

@@ -9,7 +9,6 @@ import (
 
 	"github.com/jvsena42/memento/internal/config"
 	"github.com/jvsena42/memento/internal/storage"
-	"github.com/jvsena42/memento/internal/twitter"
 )
 
 const (
@@ -20,8 +19,8 @@ const (
 )
 
 type Scheduler struct {
-	Client       *twitter.Client
-	CapsuleStore *storage.CapsuleStore
+	Client       TwitterClient
+	CapsuleStore CapsuleStorage
 	Config       *config.Config
 }
 
