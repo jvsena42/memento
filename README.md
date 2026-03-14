@@ -10,7 +10,7 @@ A Twitter/X bot that acts as a time capsule. Mention `@mementobot_x` on any twee
 4. On the scheduled date, the bot republishes the tweet as a quote tweet, tagging the original requester
 5. If the original tweet was deleted, the bot posts the saved snapshot with a message noting it was lost
 
-Each user can only save **one tweet per day** to prevent spam. Each tweet can only be saved **once** — first come, first served. If someone tries to save an already-captured tweet, the bot replies: *"This one's already saved! ⏳"*
+Each user can save up to **5 tweets per day** (configurable via `MAX_CAPSULES_PER_USER_PER_DAY`). Each tweet can only be saved **once** — first come, first served. If someone tries to save an already-captured tweet, the bot replies: *"This one's already saved! ⏳"*
 
 ## Example
 
@@ -67,7 +67,8 @@ memento/
 ├── migrations/
 │   ├── 001_create_capsules.sql
 │   ├── 002_create_key_value.sql
-│   └── 003_add_years_delay.sql
+│   ├── 003_add_years_delay.sql
+│   └── 004_add_created_at_index.sql
 ├── .env.example
 ├── Dockerfile
 ├── go.mod
@@ -76,7 +77,7 @@ memento/
 
 ## Requirements
 
-- Go 1.21+
+- Go 1.25+
 - A Twitter/X Developer account with API v2 access (Basic tier is sufficient)
 - SQLite
 
@@ -94,7 +95,10 @@ BOT_HANDLE=MementoBot
 DATABASE_PATH=./memento.db
 DEV_MODE=false
 POLL_INTERVAL=30s
-REPUBLISH_DELAY=5m  # Only used when DEV_MODE=true, otherwise defaults to 5 years
+REPUBLISH_DELAY=5m              # Only used when DEV_MODE=true, otherwise defaults to 5 years
+MAX_CAPSULES_PER_DAY=100        # Global daily capsule creation limit
+MAX_CAPSULES_PER_USER_PER_DAY=5 # Per-user daily capsule limit
+MAX_MENTION_PAGES=3             # Max pages to fetch when polling mentions
 ```
 
 ### Dev Mode
@@ -165,8 +169,10 @@ The bot is designed to run as a long-lived process. It starts two loops:
 
 ## Rate Limits
 
-- **Per user:** 1 capsule per day
+- **Per user:** 5 capsules per day (configurable via `MAX_CAPSULES_PER_USER_PER_DAY`)
+- **Global:** 100 capsules per day (configurable via `MAX_CAPSULES_PER_DAY`)
 - **Per tweet:** 1 capsule ever (first come, first served)
+- **Scheduler:** Max 3 capsules published per user per scheduler tick
 - **Twitter API:** The bot respects Twitter's rate limits with exponential backoff on 429 responses and up to 3 retries on 5xx errors
 
 ## Edge Cases
@@ -174,7 +180,7 @@ The bot is designed to run as a long-lived process. It starts two loops:
 | Scenario                          | Behavior                                                                     |
 |-----------------------------------|------------------------------------------------------------------------------|
 | Original tweet deleted            | Posts snapshot text + original link + "lost memory" message                  |
-| User already tagged today         | Replies with a friendly "come back tomorrow" message                          |
+| User hit daily limit (5/day)      | Replies with a friendly "come back tomorrow" message                          |
 | Bot tagged on a root tweet        | Treats that tweet itself as the capsule target                               |
 | Tweet already saved by someone    | Replies: *"This one's already saved! ⏳"*                                    |
 | Protected/suspended account       | Skipped gracefully, status set to `failed`                                   |
@@ -188,7 +194,7 @@ The bot is designed to run as a long-lived process. It starts two loops:
 When mentioning the bot, you can include a number (1–5) in your message to set how many years before the tweet is brought back:
 
 ```
-@MementoBot 3
+@mementobot_x 3
 ```
 
 If no valid number is found, or the value is out of range, it defaults to **5 years**.
