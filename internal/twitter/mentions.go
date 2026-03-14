@@ -9,7 +9,7 @@ import (
 func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 	params := map[string]string{
 		"tweet.fields": "author_id,text,created_at,conversation_id,in_reply_to_user_id,referenced_tweets",
-		"expansions":   "author_id,referenced_tweets.id",
+		"expansions":   "author_id,referenced_tweets.id,referenced_tweets.id.author_id",
 	}
 	if c.SinceID != "" {
 		params["since_id"] = c.SinceID
@@ -50,7 +50,15 @@ func (c *Client) GetMentions(ctx context.Context) (*TweetsResponse, error) {
 		params["pagination_token"] = response.Meta.NextToken
 	}
 
-	response.Tweets = allTweets
+	seen := make(map[string]struct{}, len(allTweets))
+	deduped := allTweets[:0]
+	for _, t := range allTweets {
+		if _, ok := seen[t.ID]; !ok {
+			seen[t.ID] = struct{}{}
+			deduped = append(deduped, t)
+		}
+	}
+	response.Tweets = deduped
 	response.Includes = &Includes{
 		Users:  allUsers,
 		Tweets: allIncludedTweets,
