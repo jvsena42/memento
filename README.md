@@ -18,27 +18,27 @@ Each user can save up to **5 tweets per day** (configurable via `MAX_CAPSULES_PE
 
 > **@someone:** just shipped my first open source project 🚀
 >
-> **@you:** @MementoBot
+> **@you:** @mementobot_x
 >
-> **@MementoBot:** 📸 Saved! I'll bring this back on 05/Feb/2031, @you!
+> **@mementobot_x:** 📸 Saved! I'll bring this back on 05/Feb/2031, @you!
 
 **Saving a memory with a custom delay:**
 
-> **@you:** @MementoBot 2
+> **@you:** @mementobot_x 2
 >
-> **@MementoBot:** 📸 Saved! I'll bring this back on 05/Feb/2028, @you!
+> **@mementobot_x:** 📸 Saved! I'll bring this back on 05/Feb/2028, @you!
 
 **On the scheduled date:**
 
-> **@MementoBot:** 🕰️ 5 years ago today... @you
+> **@mementobot_x:** 🕰️ 2 years ago today... @you
 >
 > *(quote tweet of the original post)*
 
 **If quoting is restricted (reply to the original mention):**
 
-> **@you:** @MementoBot *(5 years ago)*
+> **@you:** @mementobot_x *(2 years ago)*
 >
-> &nbsp;&nbsp;&nbsp;&nbsp;**@MementoBot:** 🕰️ @you saved this memory 5 years ago:
+> &nbsp;&nbsp;&nbsp;&nbsp;**@mementobot_x:** 🕰️ @you saved this memory 2 years ago:
 >
 > &nbsp;&nbsp;&nbsp;&nbsp;"just shipped my first open source project 🚀"
 >
@@ -46,9 +46,9 @@ Each user can save up to **5 tweets per day** (configurable via `MAX_CAPSULES_PE
 
 **If the original was deleted (reply to the original mention):**
 
-> **@you:** @MementoBot *(5 years ago)*
+> **@you:** @mementobot_x *(2 years ago)*
 >
-> &nbsp;&nbsp;&nbsp;&nbsp;**@MementoBot:** 🕰️ @you saved this memory 5 years ago, but the original tweet has been deleted 🕊️
+> &nbsp;&nbsp;&nbsp;&nbsp;**@mementobot_x:** 🕰️ @you saved this memory 2 years ago, but the original tweet has been deleted 🕊️
 >
 > &nbsp;&nbsp;&nbsp;&nbsp;It said: *"just shipped my first open source project 🚀"*
 >
