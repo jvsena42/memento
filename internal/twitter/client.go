@@ -119,6 +119,7 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 
 		//Network error
 		if err != nil {
+			slog.Warn("network error, retrying", "method", method, "attempt", attempt, "error", err)
 			if err := sleepWithContext(ctx, time.Duration(math.Pow(2, float64(attempt)))*time.Second); err != nil {
 				return nil, err
 			}
@@ -133,7 +134,7 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 			if waitTime < 1*time.Second {
 				waitTime = 1 * time.Second
 			}
-			slog.Warn("rate limited, waiting", "seconds", waitTime.Seconds())
+			slog.Warn("rate limited, waiting", "method", method, "seconds", waitTime.Seconds())
 			if err := sleepWithContext(ctx, waitTime); err != nil {
 				return nil, err
 			}
@@ -142,6 +143,7 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 
 		// Server error -> wait and retry
 		if statusCode >= 500 {
+			slog.Warn("server error, retrying", "method", method, "status", statusCode, "attempt", attempt)
 			if err := sleepWithContext(ctx, time.Duration(math.Pow(2, float64(attempt)))*time.Second); err != nil {
 				return nil, err
 			}

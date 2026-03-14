@@ -61,7 +61,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 	requesterHandler := findUser(users, mention.AuthorID)
 
 	if userCount >= h.Config.MaxCapsulesPerUserDay {
-		slog.Debug("user daily limit reached, skipping", "user_id", mention.AuthorID, "count", userCount)
+		slog.Debug("user daily limit reached, skipping", "user_id", mention.AuthorID, "count", userCount, "limit", h.Config.MaxCapsulesPerUserDay)
 		return nil
 	}
 
@@ -82,6 +82,7 @@ func (h *Handler) ProcessMention(ctx context.Context, mention twitter.Tweet, use
 	}
 
 	// Fallback: fetch individually if not in includes (e.g., across pagination boundaries)
+	slog.Debug("target tweet not in includes, fetching individually", "tweet_id", targetID)
 	targetTweet, err := h.Client.GetTweet(ctx, targetID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch target tweet: %w", err)
@@ -155,10 +156,18 @@ func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target
 		return fmt.Errorf("failed to create capsule: %w", err)
 	}
 
+	slog.Info("capsule saved",
+		"capsule_id", capsule.ID,
+		"tweet_id", capsule.TweetID,
+		"requester", requesterHandler,
+		"years_delay", years,
+		"republish_at", republishAt.Format(time.RFC3339),
+	)
+
 	date := capsule.RepublishAt.Format("02/Jan/2006")
 	if _, err := h.Client.PostTweet(ctx, fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
 		"", mention.ID); err != nil {
-		slog.Warn("failed to reply with confirmation", "error", err)
+		slog.Warn("failed to reply with confirmation", "mention_id", mention.ID, "requester", requesterHandler, "error", err)
 	}
 
 	return nil
@@ -169,6 +178,7 @@ func (h *Handler) StartPoller(ctx context.Context) {
 	if err != nil {
 		slog.Warn("failed to load last mention id", "error", err)
 	} else {
+		slog.Debug("resuming from last mention", "since_id", sinceID)
 		h.Client.SetSinceID(sinceID)
 	}
 
@@ -206,8 +216,11 @@ func (h *Handler) pollMentions(ctx context.Context) {
 	}
 
 	if len(tweetsResponse.Tweets) == 0 {
+		slog.Debug("no new mentions")
 		return
 	}
+
+	slog.Info("processing mentions", "count", len(tweetsResponse.Tweets))
 
 	var users []twitter.User
 	var includedTweets []twitter.Tweet

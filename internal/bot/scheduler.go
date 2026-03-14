@@ -44,8 +44,11 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 		}
 
 		if len(capsules) == 0 {
+			slog.Debug("no due capsules", "batch", batch)
 			break
 		}
+
+		slog.Info("publishing due capsules", "batch", batch, "count", len(capsules))
 
 		// Batch-fetch all tweet IDs in a single API call
 		ids := make([]string, len(capsules))
@@ -61,7 +64,7 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
 		for _, capsule := range capsules {
 			if publishedPerUser[capsule.RequesterID] >= maxPublishPerUserPerTick {
-				slog.Debug("per-user publish limit reached, deferring", "user_id", capsule.RequesterID)
+				slog.Debug("per-user publish limit reached, deferring", "user_id", capsule.RequesterID, "capsule_id", capsule.ID)
 				continue
 			}
 
@@ -74,19 +77,21 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ %d years ago today... @%s", capsule.YearsDelay, capsule.RequesterHandle), capsule.TweetID, "")
 				if err != nil {
 					if errors.Is(err, twitter.ErrQuoteNotAllowed) {
-						slog.Warn("quoting not allowed, falling back to repost", "capsule_id", capsule.ID)
+						slog.Warn("quoting not allowed, falling back to repost", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID)
 						if err := s.publishRepost(ctx, capsule); err != nil {
-							slog.Error("error publishing repost fallback", "error", err)
+							slog.Error("error publishing repost fallback", "capsule_id", capsule.ID, "error", err)
 						} else {
+							slog.Info("capsule republished as repost", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID, "requester", capsule.RequesterHandle)
 							publishedPerUser[capsule.RequesterID]++
 						}
 					} else {
-						slog.Error("error publishing tweet", "error", err)
+						slog.Error("error publishing tweet", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID, "error", err)
 						if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
 							slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
 						}
 					}
 				} else {
+					slog.Info("capsule republished as quote tweet", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID, "requester", capsule.RequesterHandle)
 					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
 						slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
 					}
@@ -94,9 +99,11 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 				}
 			} else {
 				// Tweet deleted or inaccessible — post snapshot
+				slog.Debug("original tweet not found, publishing snapshot", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID)
 				if err := s.publishDeletedCapsule(ctx, capsule); err != nil {
-					slog.Error("error publishing deleted capsule", "error", err)
+					slog.Error("error publishing deleted capsule", "capsule_id", capsule.ID, "error", err)
 				} else {
+					slog.Info("capsule republished as deleted snapshot", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID, "requester", capsule.RequesterHandle)
 					publishedPerUser[capsule.RequesterID]++
 				}
 			}
