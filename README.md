@@ -221,6 +221,10 @@ If no valid number is found, or the value is out of range, it defaults to **5 ye
 - **Twitter API v2** — mentions, tweet lookup, posting
 - **OAuth 1.0a** — request signing via `github.com/dghubble/oauth1`
 
+## Support
+
+Help keep the bot alive — send sats to **jvsena42@blink.sv** ⚡
+
 ## License
 
 MIT
