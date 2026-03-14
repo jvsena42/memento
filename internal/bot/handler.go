@@ -123,6 +123,14 @@ func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target
 	}
 
 	years := parseYear(mention.Text, config.MinRepublishDelayYear, config.MaxRepublishDelayYear)
+
+	var republishAt time.Time
+	if h.Config.DevMode {
+		republishAt = time.Now().UTC().Add(h.Config.RepublishDelay * time.Duration(years))
+	} else {
+		republishAt = time.Now().UTC().AddDate(years, 0, 0)
+	}
+
 	capsule := storage.Capsule{
 		RequesterID:     mention.AuthorID,
 		RequesterHandle: requesterHandler,
@@ -130,7 +138,7 @@ func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target
 		TweetAuthor:     tweetAuthor,
 		TweetText:       trimmedText,
 		IsReply:         mention.InReplyToUserID != nil,
-		RepublishAt:     time.Now().UTC().AddDate(years, 0, 0),
+		RepublishAt:     republishAt,
 		YearsDelay:      int64(years),
 	}
 

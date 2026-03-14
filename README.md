@@ -95,7 +95,7 @@ BOT_HANDLE=MementoBot
 DATABASE_PATH=./memento.db
 DEV_MODE=false
 POLL_INTERVAL=30s
-REPUBLISH_DELAY=5m              # Only used when DEV_MODE=true, otherwise defaults to 5 years
+REPUBLISH_DELAY=5m              # Base delay per year in DEV_MODE (e.g. 5m × 2 years = 10m). Ignored in production.
 MAX_CAPSULES_PER_DAY=100        # Global daily capsule creation limit
 MAX_CAPSULES_PER_USER_PER_DAY=5 # Per-user daily capsule limit
 MAX_MENTION_PAGES=3             # Max pages to fetch when polling mentions
@@ -103,7 +103,7 @@ MAX_MENTION_PAGES=3             # Max pages to fetch when polling mentions
 
 ### Dev Mode
 
-Set `DEV_MODE=true` to use a short republish delay (default 5 minutes) instead of the years-based delay. The scheduler also runs every minute instead of every hour. Useful for testing the full pipeline end to end.
+Set `DEV_MODE=true` to use a short republish delay instead of real years. The `REPUBLISH_DELAY` value (default 5 minutes) is multiplied by the number of years requested — so a 2-year capsule is republished in 10 minutes, a 5-year capsule in 25 minutes. The scheduler also runs every minute instead of every hour. Useful for testing the full pipeline end to end.
 
 ## Getting Started
 
