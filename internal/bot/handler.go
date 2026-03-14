@@ -138,6 +138,7 @@ func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target
 		TweetAuthor:     tweetAuthor,
 		TweetText:       trimmedText,
 		IsReply:         mention.InReplyToUserID != nil,
+		MentionID:       mention.ID,
 		RepublishAt:     republishAt,
 		YearsDelay:      int64(years),
 	}

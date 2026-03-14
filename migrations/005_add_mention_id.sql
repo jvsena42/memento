@@ -1,0 +1,1 @@
+ALTER TABLE capsules ADD COLUMN mention_id TEXT NOT NULL DEFAULT '';

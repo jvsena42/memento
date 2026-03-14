@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS capsules (
     tweet_author     TEXT      NOT NULL,
     tweet_text       TEXT      NOT NULL,
     is_reply         BOOLEAN   NOT NULL DEFAULT 0,
+    mention_id       TEXT      NOT NULL DEFAULT '',
     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     republish_at     TIMESTAMP NOT NULL,
     status           TEXT      NOT NULL DEFAULT 'pending',

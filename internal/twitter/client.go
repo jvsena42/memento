@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dghubble/oauth1"
@@ -152,7 +153,10 @@ func (c *Client) doRequestWithRetry(ctx context.Context, method string, url stri
 		}
 
 		if statusCode == 403 {
-			return nil, fmt.Errorf("forbidden (403): %s", string(respBody))
+			if strings.Contains(string(respBody), "Quoting this post is not allowed") {
+				return nil, ErrQuoteNotAllowed
+			}
+			return nil, ErrForbidden
 		}
 
 		// Other client errors (400, 401, etc.) → don't retry

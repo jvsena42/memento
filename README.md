@@ -7,8 +7,8 @@ A Twitter/X bot that acts as a time capsule. Mention `@mementobot_x` on any twee
 1. A user mentions `@mementobot_x` on a tweet (either as a reply or directly on a root tweet), optionally specifying a number of years (1–5)
 2. The bot saves a snapshot of the target tweet
 3. It replies with a confirmation: *"📸 Saved! I'll bring this back on 05/Feb/2031, @user!"*
-4. On the scheduled date, the bot republishes the tweet as a quote tweet, tagging the original requester
-5. If the original tweet was deleted, the bot posts the saved snapshot with a message noting it was lost
+4. On the scheduled date, the bot republishes the tweet as a quote tweet, tagging the original requester. If quoting isn't allowed, it replies to the original mention instead with the saved text
+5. If the original tweet was deleted, the bot replies to the original mention with the saved snapshot and a note that the tweet was lost
 
 Each user can save up to **5 tweets per day** (configurable via `MAX_CAPSULES_PER_USER_PER_DAY`). Each tweet can only be saved **once** — first come, first served. If someone tries to save an already-captured tweet, the bot replies: *"This one's already saved! ⏳"*
 
@@ -34,13 +34,25 @@ Each user can save up to **5 tweets per day** (configurable via `MAX_CAPSULES_PE
 >
 > *(quote tweet of the original post)*
 
-**If the original was deleted:**
+**If quoting is restricted (reply to the original mention):**
 
-> **@MementoBot:** 🕰️ @you saved this memory 5 years ago, but the original tweet has been deleted 🕊️
+> **@you:** @MementoBot *(5 years ago)*
 >
-> It said: *"just shipped my first open source project 🚀"*
+> &nbsp;&nbsp;&nbsp;&nbsp;**@MementoBot:** 🕰️ @you saved this memory 5 years ago:
 >
-> Original link: https://x.com/i/status/123456789
+> &nbsp;&nbsp;&nbsp;&nbsp;"just shipped my first open source project 🚀"
+>
+> &nbsp;&nbsp;&nbsp;&nbsp;https://x.com/i/status/123456789
+
+**If the original was deleted (reply to the original mention):**
+
+> **@you:** @MementoBot *(5 years ago)*
+>
+> &nbsp;&nbsp;&nbsp;&nbsp;**@MementoBot:** 🕰️ @you saved this memory 5 years ago, but the original tweet has been deleted 🕊️
+>
+> &nbsp;&nbsp;&nbsp;&nbsp;It said: *"just shipped my first open source project 🚀"*
+>
+> &nbsp;&nbsp;&nbsp;&nbsp;Original link: https://x.com/i/status/123456789
 
 ## Project Structure
 
@@ -57,7 +69,7 @@ memento/
 │   │   ├── mentions.go        # Polling the mentions timeline (paginated)
 │   │   ├── tweets.go          # Fetch, post, and quote tweets
 │   │   ├── models.go          # Twitter API v2 response types
-│   │   └── errors.go          # Sentinel errors (ErrNotFound, ErrForbidden)
+│   │   └── errors.go          # Sentinel errors (ErrNotFound, ErrForbidden, ErrQuoteNotAllowed)
 │   ├── bot/
 │   │   ├── handler.go         # Mention processing and capsule creation
 │   │   └── scheduler.go       # Hourly job to republish due capsules
@@ -68,7 +80,8 @@ memento/
 │   ├── 001_create_capsules.sql
 │   ├── 002_create_key_value.sql
 │   ├── 003_add_years_delay.sql
-│   └── 004_add_created_at_index.sql
+│   ├── 004_add_created_at_index.sql
+│   └── 005_add_mention_id.sql
 ├── .env.example
 ├── Dockerfile
 ├── go.mod
@@ -142,6 +155,7 @@ Memento uses SQLite to store capsules. The schema is applied automatically on st
 | `tweet_author`     | TEXT      | Author of the target tweet                          |
 | `tweet_text`       | TEXT      | Snapshot of the tweet text (fallback)               |
 | `is_reply`         | BOOLEAN   | Whether the mention was a reply or root tweet       |
+| `mention_id`       | TEXT      | Tweet ID of the bot mention (used to reply in-thread on fallback) |
 | `years_delay`      | INTEGER   | Number of years until republish (1–5, default 5)    |
 | `created_at`       | TIMESTAMP | When the capsule was created                        |
 | `republish_at`     | TIMESTAMP | When the tweet should be republished                |
@@ -179,7 +193,8 @@ The bot is designed to run as a long-lived process. It starts two loops:
 
 | Scenario                          | Behavior                                                                     |
 |-----------------------------------|------------------------------------------------------------------------------|
-| Original tweet deleted            | Posts snapshot text + original link + "lost memory" message                  |
+| Original tweet deleted            | Replies to original mention with snapshot text + original link               |
+| Quote tweet forbidden (403)       | Replies to original mention with saved tweet text + original link            |
 | User hit daily limit (5/day)      | Replies with a friendly "come back tomorrow" message                          |
 | Bot tagged on a root tweet        | Treats that tweet itself as the capsule target                               |
 | Tweet already saved by someone    | Replies: *"This one's already saved! ⏳"*                                    |

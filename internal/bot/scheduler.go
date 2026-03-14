@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jvsena42/memento/internal/config"
 	"github.com/jvsena42/memento/internal/storage"
+	"github.com/jvsena42/memento/internal/twitter"
 )
 
 const (
@@ -71,9 +73,18 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 				// Tweet still exists — post quote tweet
 				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ %d years ago today... @%s", capsule.YearsDelay, capsule.RequesterHandle), capsule.TweetID, "")
 				if err != nil {
-					slog.Error("error publishing tweet", "error", err)
-					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
-						slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+					if errors.Is(err, twitter.ErrQuoteNotAllowed) {
+						slog.Warn("quoting not allowed, falling back to repost", "capsule_id", capsule.ID)
+						if err := s.publishRepost(ctx, capsule); err != nil {
+							slog.Error("error publishing repost fallback", "error", err)
+						} else {
+							publishedPerUser[capsule.RequesterID]++
+						}
+					} else {
+						slog.Error("error publishing tweet", "error", err)
+						if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
+							slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+						}
 					}
 				} else {
 					if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
@@ -97,6 +108,34 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 	}
 }
 
+func (s *Scheduler) publishRepost(ctx context.Context, capsule storage.Capsule) error {
+	prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago:\n\n\"\"\n\n", capsule.RequesterHandle, capsule.YearsDelay)
+	prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
+
+	availableChars := maxTweetLength - prefixLength
+	truncatedText := truncate(capsule.TweetText, availableChars)
+
+	text := fmt.Sprintf("🕰️ @%s saved this memory %d years ago:\n\n\"%s\"\n\nhttps://x.com/i/status/%s",
+		capsule.RequesterHandle,
+		capsule.YearsDelay,
+		truncatedText,
+		capsule.TweetID,
+	)
+
+	_, postErr := s.Client.PostTweet(ctx, text, "", capsule.MentionID)
+	if postErr != nil {
+		if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
+			slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+		}
+		return postErr
+	}
+
+	if err := s.CapsuleStore.UpdateStatus(capsule.ID, "published"); err != nil {
+		slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
+	}
+	return nil
+}
+
 func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.Capsule) error {
 	prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
 	prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
@@ -112,7 +151,7 @@ func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.C
 		capsule.TweetID,
 	)
 
-	_, postErr := s.Client.PostTweet(ctx, text, "", "")
+	_, postErr := s.Client.PostTweet(ctx, text, "", capsule.MentionID)
 	if postErr != nil {
 		if err := s.CapsuleStore.UpdateStatus(capsule.ID, "failed"); err != nil {
 			slog.Error("failed to update capsule status", "capsule_id", capsule.ID, "error", err)
