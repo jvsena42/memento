@@ -380,8 +380,18 @@ func TestProcessMention_PostsConfirmation(t *testing.T) {
 	if !strings.Contains(postedText, "@alice") {
 		t.Errorf("confirmation should mention @alice, got %q", postedText)
 	}
-	if !strings.Contains(postedText, "Saved!") {
-		t.Errorf("confirmation should contain 'Saved!', got %q", postedText)
+	// Verify the posted text matches one of the confirmation templates
+	expectedDate := time.Now().UTC().AddDate(2, 0, 0).Format("02/Jan/2006")
+	matched := false
+	for _, tmpl := range confirmationTemplates {
+		expected := fmt.Sprintf(tmpl, expectedDate, "alice")
+		if postedText == expected {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		t.Errorf("confirmation should match a known template, got %q", postedText)
 	}
 }
 
