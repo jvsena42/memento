@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"time"
 	"unicode/utf8"
 
@@ -74,7 +75,7 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 
 			if _, exists := existingTweets[capsule.TweetID]; exists {
 				// Tweet still exists — post quote tweet
-				_, err := s.Client.PostTweet(ctx, fmt.Sprintf("🕰️ %d years ago today... @%s", capsule.YearsDelay, capsule.RequesterHandle), capsule.TweetID, "")
+				_, err := s.Client.PostTweet(ctx, randomTemplate(quoteTweetTemplates, capsule.YearsDelay, capsule.RequesterHandle), capsule.TweetID, "")
 				if err != nil {
 					if errors.Is(err, twitter.ErrQuoteNotAllowed) {
 						slog.Warn("quoting not allowed, falling back to repost", "capsule_id", capsule.ID, "tweet_id", capsule.TweetID)
@@ -116,13 +117,15 @@ func (s *Scheduler) PublishDueCapsules(ctx context.Context) {
 }
 
 func (s *Scheduler) publishRepost(ctx context.Context, capsule storage.Capsule) error {
-	prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago:\n\n\"\"\n\n", capsule.RequesterHandle, capsule.YearsDelay)
+	// Pick a random template and compute available chars for the tweet text
+	tmpl := repostTemplates[rand.Intn(len(repostTemplates))]
+	prefix := fmt.Sprintf(tmpl, capsule.RequesterHandle, capsule.YearsDelay, "", "")
 	prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
 
 	availableChars := maxTweetLength - prefixLength
 	truncatedText := truncate(capsule.TweetText, availableChars)
 
-	text := fmt.Sprintf("🕰️ @%s saved this memory %d years ago:\n\n\"%s\"\n\nhttps://x.com/i/status/%s",
+	text := fmt.Sprintf(tmpl,
 		capsule.RequesterHandle,
 		capsule.YearsDelay,
 		truncatedText,
@@ -144,14 +147,16 @@ func (s *Scheduler) publishRepost(ctx context.Context, capsule storage.Capsule) 
 }
 
 func (s *Scheduler) publishDeletedCapsule(ctx context.Context, capsule storage.Capsule) error {
-	prefix := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"\"\n\nOriginal link: ", capsule.RequesterHandle, capsule.YearsDelay)
+	// Pick a random template and compute available chars for the tweet text
+	tmpl := deletedTemplates[rand.Intn(len(deletedTemplates))]
+	prefix := fmt.Sprintf(tmpl, capsule.RequesterHandle, capsule.YearsDelay, "", "")
 	prefixLength := utf8.RuneCountInString(prefix) + urlShorterLength
 
 	availableChars := maxTweetLength - prefixLength
 
 	truncatedText := truncate(capsule.TweetText, availableChars)
 
-	text := fmt.Sprintf("🕰️ @%s saved this memory %d years ago, but the original tweet has been deleted 🕊️\n\nIt said: \"%s\"\n\nOriginal link: https://x.com/i/status/%s",
+	text := fmt.Sprintf(tmpl,
 		capsule.RequesterHandle,
 		capsule.YearsDelay,
 		truncatedText,

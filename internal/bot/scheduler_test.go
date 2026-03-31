@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -106,11 +107,19 @@ func TestPublishDueCapsules_TweetExists_QuoteTweet(t *testing.T) {
 	if postedQuoteID != "tweet1" {
 		t.Errorf("quote tweet ID = %q, want tweet1", postedQuoteID)
 	}
-	if !strings.Contains(postedText, "3 years ago") {
-		t.Errorf("text should contain '3 years ago', got %q", postedText)
-	}
 	if !strings.Contains(postedText, "@alice") {
 		t.Errorf("text should mention @alice, got %q", postedText)
+	}
+	matched := false
+	for _, tmpl := range quoteTweetTemplates {
+		expected := fmt.Sprintf(tmpl, int64(3), "alice")
+		if postedText == expected {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		t.Errorf("text should match a quote tweet template, got %q", postedText)
 	}
 }
 
@@ -144,11 +153,11 @@ func TestPublishDueCapsules_TweetDeleted_PostsSnapshot(t *testing.T) {
 
 	s.PublishDueCapsules(context.Background())
 
-	if !strings.Contains(postedText, "deleted") {
-		t.Errorf("snapshot text should mention 'deleted', got %q", postedText)
-	}
 	if !strings.Contains(postedText, "deleted tweet text") {
 		t.Errorf("snapshot should contain original text, got %q", postedText)
+	}
+	if !strings.Contains(postedText, "@alice") {
+		t.Errorf("snapshot should mention @alice, got %q", postedText)
 	}
 }
 

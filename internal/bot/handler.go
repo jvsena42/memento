@@ -165,7 +165,7 @@ func (h *Handler) saveCapsule(ctx context.Context, mention twitter.Tweet, target
 	)
 
 	date := capsule.RepublishAt.Format("02/Jan/2006")
-	if _, err := h.Client.PostTweet(ctx, fmt.Sprintf("📸 Saved! I'll bring this back on %s, @%s!", date, requesterHandler),
+	if _, err := h.Client.PostTweet(ctx, randomTemplate(confirmationTemplates, date, requesterHandler),
 		"", mention.ID); err != nil {
 		slog.Warn("failed to reply with confirmation", "mention_id", mention.ID, "requester", requesterHandler, "error", err)
 	}
